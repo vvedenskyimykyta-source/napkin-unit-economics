@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { compute } from './engine/calc';
 import { getPreset, applyNiche, type Mode } from './engine/presets';
 import type { Inputs } from './engine/types';
@@ -15,11 +15,22 @@ import { LtvCurve } from './components/charts/LtvCurve';
 import { CohortArea } from './components/charts/CohortArea';
 import { SensHeatmap } from './components/charts/SensHeatmap';
 import { PnlBars } from './components/charts/PnlBars';
+import { BaselineBar } from './components/BaselineBar';
+
+const LS_BASELINE = 'napkin.baseline.v1';
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('mobile');
   const [lang, setLang] = useState<Lang>('en');
   const [inputs, setInputs] = useState<Inputs>(() => getPreset('mobile'));
+  const [baselineInputs, setBaselineInputs] = useState<Inputs | null>(() => {
+    try {
+      const raw = localStorage.getItem(LS_BASELINE);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
 
   const t = strings(lang);
 
@@ -36,7 +47,28 @@ export default function App() {
     setInputs((prev) => applyNiche(prev, nicheId));
   };
 
+  const setBaseline = () => {
+    const snap = structuredClone(inputs);
+    setBaselineInputs(snap);
+    try { localStorage.setItem(LS_BASELINE, JSON.stringify(snap)); } catch {}
+  };
+  const clearBaseline = () => {
+    setBaselineInputs(null);
+    try { localStorage.removeItem(LS_BASELINE); } catch {}
+  };
+
   const result = useMemo(() => compute(inputs), [inputs]);
+  const baselineResult = useMemo(
+    () => baselineInputs ? compute(baselineInputs) : null,
+    [baselineInputs]
+  );
+
+  // Keep mode in sync when baseline is restored from localStorage
+  useEffect(() => {
+    if (baselineInputs && baselineInputs.mode !== mode) {
+      // noop — baseline can be from a different mode; comparison still useful
+    }
+  }, [baselineInputs, mode]);
 
   return (
     <div className="min-h-[100dvh] flex flex-col">
@@ -58,7 +90,14 @@ export default function App() {
               </p>
             </section>
 
-            <KPITiles result={result} />
+            <BaselineBar
+              current={result}
+              baseline={baselineResult}
+              onSetBaseline={setBaseline}
+              onClearBaseline={clearBaseline}
+            />
+
+            <KPITiles result={result} baseline={baselineResult} />
             <Diagnostics result={result} />
             <Forecast result={result} t={t} />
 
