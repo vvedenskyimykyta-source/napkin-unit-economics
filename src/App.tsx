@@ -143,10 +143,10 @@ export default function App() {
           <div id="napkin-canvas" className="max-w-6xl mx-auto p-6 lg:p-10 space-y-6">
             <section>
               <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
-                Napkin Unit Economics
+                Napkin Unit Economics <span className="text-[var(--color-text-3)] font-normal text-[18px]">— {t.tagline}</span>
               </h1>
-              <p className="text-[var(--color-text-2)] mt-2 max-w-xl text-sm">
-                {t.tagline}. Punch in budget, pricing, CPA, churn. Get LTV, Payback, cohort break-even.
+              <p className="text-[var(--color-text-2)] mt-2 max-w-2xl text-sm">
+                Punch in budget, pricing, CPA, churn. Get LTV, Payback, cohort break-even, and an honest take on where the math gets tight.
               </p>
             </section>
 

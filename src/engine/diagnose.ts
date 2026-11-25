@@ -23,7 +23,6 @@ export function diagnose(r: ComputeResult): DiagnosticFinding[] {
     d0UpsellShareGood: 0.15
   };
 
-  const paybackMax = 13;
   const paybackGood = isSaas ? 12 : 6;
   const ltvCac = r.ltv13 / Math.max(r.eCPA, 0.01);
   const churnM = r.inputs.churnM / 100;
@@ -33,26 +32,45 @@ export function diagnose(r: ComputeResult): DiagnosticFinding[] {
   if (r.paybackMonth === null) {
     findings.push({
       priority: 'high',
-      msg: `**Unit economics doesn't close in ${paybackMax} months.** LTV13 (${fmt(r.ltv13, 0)}) is below eCPA (${fmt(r.eCPA, 0)}). Gap: **${fmt(r.eCPA - r.ltv13, 0)}**.`,
+      msg: `**This doesn't recoup — even over 60 months.** LTV horizon (${fmt(r.ltv13, 0)}) is below eCPA (${fmt(r.eCPA, 0)}). Gap to close: **${fmt(r.eCPA - r.ltv13, 0)}** per user. Something needs to change — price, channel or product.`,
       where: ''
     });
   } else if (r.paybackMonth > r.monthsOfBudget) {
+    const deficit = r.paybackMonth - r.monthsOfBudget;
     findings.push({
       priority: 'high',
-      msg: `**Budget won't last to Payback.** Breaks even at M${r.paybackMonth}; budget runs out at ${r.monthsOfBudget} mo.`,
+      msg: `**Budget runs out before Payback.** You recoup at M${r.paybackMonth}, but spend ends at M${r.monthsOfBudget}. ${deficit > 12 ? "That's a whole year of empty tank." : `Short by ${deficit} month${deficit > 1 ? 's' : ''}.`}`,
       where: ''
     });
   } else if (r.paybackMonth <= paybackGood) {
+    const nice = ltvCac >= 3 ? ' Comfortably.' : '';
     findings.push({
       priority: 'low',
-      msg: `**Unit economics works.** Payback ${r.paybackMonth === 0 ? 'D0' : 'M' + r.paybackMonth}, LTV/CAC ${ltvCac.toFixed(2)}×.`,
+      msg: `**Unit economics works.** Payback ${r.paybackMonth === 0 ? 'D0' : 'M' + r.paybackMonth}, LTV/CAC ${ltvCac.toFixed(2)}×.${nice}`,
       where: ''
     });
   } else {
     findings.push({
       priority: 'mid',
-      msg: `**Works, but Payback is slow.** M${r.paybackMonth}, LTV/CAC ${ltvCac.toFixed(2)}×.`,
+      msg: `**Works, but Payback is long.** M${r.paybackMonth}, LTV/CAC ${ltvCac.toFixed(2)}×. Fine if you have the cashflow. Tight if you don't.`,
       where: ''
+    });
+  }
+
+  // Edge case: suspiciously perfect
+  if (r.paybackMonth !== null && r.paybackMonth <= 1 && ltvCac >= 5) {
+    findings.push({
+      priority: 'info',
+      msg: `**Payback D0-M1 with LTV/CAC ${ltvCac.toFixed(1)}×.** Either you nailed it, or your numbers are too optimistic. Double-check CPA and churn against your real cohorts.`,
+      where: ''
+    });
+  }
+  // Edge case: churn so high it's not a subscription
+  if (churnM >= 0.7) {
+    findings.push({
+      priority: 'high',
+      msg: `**Monthly Churn ${pct(churnM)}.** At this rate you're not running a subscription, you're running a casino. Users don't come back — check whether this is really a subscription business.`,
+      where: 'Dig: is pricing wrong? Is this a one-time-purchase product in disguise?'
     });
   }
 
@@ -85,13 +103,13 @@ export function diagnose(r: ComputeResult): DiagnosticFinding[] {
   if (ltvCac < BM.ltvCacBad && r.paybackMonth !== null) {
     findings.push({
       priority: 'high',
-      msg: `**LTV/CAC ${ltvCac.toFixed(2)}×** is critically thin (norm ${BM.ltvCacNorm}×+).`,
+      msg: `**LTV/CAC ${ltvCac.toFixed(2)}×** is critically thin (norm ${BM.ltvCacNorm}×+). One bad week of churn and you're underwater.`,
       where: 'Dig: CPA (quality traffic, best creative), pricing, retention.'
     });
   } else if (ltvCac < BM.ltvCacNorm && r.paybackMonth !== null) {
     findings.push({
       priority: 'mid',
-      msg: `**LTV/CAC ${ltvCac.toFixed(2)}×** is below target ${BM.ltvCacNorm}×.`,
+      msg: `**LTV/CAC ${ltvCac.toFixed(2)}×** is below target ${BM.ltvCacNorm}×. Works, but no cushion.`,
       where: 'Dig: cut CPA 15–20% or lift LTV via retention/upsells.'
     });
   }
