@@ -1,25 +1,23 @@
-import type { Inputs, Mode } from './types';
+import type { Inputs, Mode, Plan } from './types';
+import { defaultProcessorFor, processorById } from './processors';
 
-/* ============================================
-   Default presets per mode
-   v2 adds a niche layer on top in Phase E.
-   ============================================ */
+const mobilePlans = (): Plan[] => [
+  { id: 'yearly',  label: 'Yearly',  periodMonths: 12,   introPrice: 44,   fullPrice: 89,   share: 60 },
+  { id: 'monthly', label: 'Monthly', periodMonths: 1,    introPrice: 15,   fullPrice: 30,   share: 30 },
+  { id: 'weekly',  label: 'Weekly',  periodMonths: 0.23, introPrice: 4.99, fullPrice: 9.99, share: 10 }
+];
 
-const BASE: Omit<Inputs, 'mode'> = {
+const saasPlans = (): Plan[] => [
+  { id: 'yearly',  label: 'Yearly',  periodMonths: 12, introPrice: 468, fullPrice: 588, share: 35 },
+  { id: 'monthly', label: 'Monthly', periodMonths: 1,  introPrice: 29,  fullPrice: 49,  share: 65 }
+];
+
+const BASE: Omit<Inputs, 'mode' | 'plans' | 'processor' | 'storeFee'> = {
   totalBudget: 50000,
   introPricing: true,
-  priceYearlyFirst: 44,
-  priceYearlyFull: 89,
-  priceMonthlyFirst: 15,
-  priceMonthlyFull: 30,
-  priceWeeklyFirst: 4.99,
-  priceWeeklyFull: 9.99,
-  shareYearly: 60,
-  shareMonthly: 30,
   renewal: 55,
   churnM: 30,
   churnW: 50,
-  storeFee: 15,
   refundRate: 2,
   cogs: 0.8,
   channels: { web: true, app: true },
@@ -32,41 +30,27 @@ const BASE: Omit<Inputs, 'mode'> = {
   organic: 15,
   email: 10,
   upsells: {
-    d0: {
-      enabled: true,
-      items: [
-        { price: 9.99, conv: 12 },
-        { price: 19.99, conv: 5 }
-      ]
-    },
-    packs: {
-      enabled: true,
-      items: [
-        { price: 4.99, conv: 5 },
-        { price: 9.99, conv: 2 }
-      ]
-    }
+    d0: { enabled: true, items: [{ price: 9.99, conv: 12 }, { price: 19.99, conv: 5 }] },
+    packs: { enabled: true, items: [{ price: 4.99, conv: 5 }, { price: 9.99, conv: 2 }] }
   }
 };
 
-const MOBILE: Inputs = { mode: 'mobile', ...BASE };
+const MOBILE: Inputs = {
+  mode: 'mobile',
+  ...BASE,
+  plans: mobilePlans(),
+  processor: defaultProcessorFor('mobile'),
+  storeFee: processorById(defaultProcessorFor('mobile')).fee
+};
 
 const SAAS: Inputs = {
   mode: 'saas',
   ...BASE,
   totalBudget: 60000,
-  priceYearlyFirst: 468,   // $49/mo yearly ~ 20% annual discount
-  priceYearlyFull: 588,
-  priceMonthlyFirst: 29,
-  priceMonthlyFull: 49,
-  priceWeeklyFirst: 0,
-  priceWeeklyFull: 0,
-  shareYearly: 35,
-  shareMonthly: 65,
+  plans: saasPlans(),
   renewal: 85,
   churnM: 6,
   churnW: 0,
-  storeFee: 3,
   refundRate: 1,
   cogs: 5,
   channels: { web: true, app: false },
@@ -77,7 +61,9 @@ const SAAS: Inputs = {
   webConv: 3.0,
   appConv: 1.5,
   organic: 25,
-  email: 15
+  email: 15,
+  processor: defaultProcessorFor('saas'),
+  storeFee: processorById(defaultProcessorFor('saas')).fee
 };
 
 export function getPreset(mode: Mode): Inputs {

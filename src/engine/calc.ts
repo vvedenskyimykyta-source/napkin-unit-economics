@@ -1,8 +1,8 @@
-import type { Inputs, ComputeResult } from './types';
+import type { Inputs, ComputeResult, Plan } from './types';
 
 /* ============================================
-   Napkin Unit Economics — Engine
-   Pure calculation. No DOM, no side effects.
+   Napkin Unit Economics — Engine (v2, plan-based)
+   Pure functions. No DOM.
    ============================================ */
 
 export function compute(raw: Inputs): ComputeResult {
@@ -11,26 +11,9 @@ export function compute(raw: Inputs): ComputeResult {
 
   const totalBudget = inputs.totalBudget;
 
-  // Pricing (intro vs rebill)
-  const pYF = inputs.introPricing ? inputs.priceYearlyFirst : inputs.priceYearlyFull;
-  const pYR = inputs.priceYearlyFull;
-  const pMF = inputs.introPricing ? inputs.priceMonthlyFirst : inputs.priceMonthlyFull;
-  const pMR = inputs.priceMonthlyFull;
-  const pWF = inputs.introPricing ? inputs.priceWeeklyFirst : inputs.priceWeeklyFull;
-  const pWR = inputs.priceWeeklyFull;
-
-  // Plan mix (normalized)
-  let shareY = inputs.shareYearly / 100;
-  let shareM = inputs.shareMonthly / 100;
-  let shareW = isSaas ? 0 : Math.max(0, 1 - shareY - shareM);
-  if (isSaas) {
-    const s = shareY + shareM;
-    if (s > 0) { shareY /= s; shareM /= s; } else { shareY = 1; shareM = 0; }
-  }
-
   const renewal = inputs.renewal / 100;
   const churnM = inputs.churnM / 100;
-  const churnW = isSaas ? 0 : inputs.churnW / 100;
+  const churnW = inputs.churnW / 100;
 
   const storeFee = inputs.storeFee / 100;
   const refundRate = inputs.refundRate / 100;
@@ -38,9 +21,30 @@ export function compute(raw: Inputs): ComputeResult {
 
   const netMult = (1 - storeFee) * (1 - refundRate);
 
-  // ARPPU D0 / rebill-avg
-  const arppuGrossD0 = pYF * shareY + pMF * shareM + pWF * shareW;
-  const arppuGrossFull = pYR * shareY + pMR * shareM + pWR * shareW;
+  // Normalize plan shares (treat as weights if they don't sum to 100)
+  const plans = inputs.plans.filter((p) => p.share > 0 && p.periodMonths > 0);
+  const totalShare = plans.reduce((s, p) => s + p.share, 0);
+  const planShare = (p: Plan) => (totalShare > 0 ? p.share / totalShare : 0);
+
+  // Share of plans with period >= 12mo (yearly or longer) for diagnostics
+  const shareY = plans
+    .filter((p) => p.periodMonths >= 12)
+    .reduce((s, p) => s + planShare(p), 0);
+
+  // Retention per period for a given plan
+  const retentionPerPeriod = (p: Plan): number => {
+    const Pm = p.periodMonths;
+    if (Pm >= 12) return Math.pow(renewal, Pm / 12);
+    if (Pm >= 1) return Math.pow(1 - churnM, Pm);
+    const weeks = Pm * (30.44 / 7);
+    return Math.pow(1 - churnW, weeks);
+  };
+
+  // D0 ARPPU (first payment weighted by share)
+  const introPrice = (p: Plan) => (inputs.introPricing ? p.introPrice : p.fullPrice);
+
+  const arppuGrossD0 = plans.reduce((s, p) => s + planShare(p) * introPrice(p), 0);
+  const arppuGrossFull = plans.reduce((s, p) => s + planShare(p) * p.fullPrice, 0);
   const arppuNetD0 = arppuGrossD0 * netMult;
 
   // D0 upsells
@@ -74,54 +78,41 @@ export function compute(raw: Inputs): ComputeResult {
 
   const blendedConv = totalCh > 0 ? nWeb * webConv + nApp * appConv : webConv;
 
-  // --- LTV functions (closures over above) ---
+  // --- Plan-based LTV ---
+  // gross: total revenue per user over `months`, weighted across plans
+  function planGrossLTV(p: Plan, months: number): number {
+    const R = retentionPerPeriod(p);
+    let rev = introPrice(p);  // paid at t=0
+    // Renewal payments at k=1,2,... while k*periodMonths <= months
+    for (let k = 1; k * p.periodMonths <= months; k++) {
+      rev += p.fullPrice * Math.pow(R, k);
+    }
+    return rev;
+  }
+
+  function planActiveMonths(p: Plan, months: number): number {
+    const R = retentionPerPeriod(p);
+    let active = 0;
+    for (let k = 0; k * p.periodMonths < months; k++) {
+      const periodLen = Math.min(p.periodMonths, months - k * p.periodMonths);
+      active += periodLen * Math.pow(R, k);
+    }
+    return active;
+  }
+
   function grossLTV(months: number): number {
-    let yearly = pYF;
-    if (months >= 12) yearly += pYR * renewal;
-    if (months >= 24) yearly += pYR * renewal * renewal;
+    if (months <= 0) return arppuGrossD0;
+    return plans.reduce((s, p) => s + planShare(p) * planGrossLTV(p, months), 0);
+  }
 
-    let monthly = pMF;
-    for (let i = 1; i < months; i++) {
-      monthly += pMR * Math.pow(1 - churnM, i);
-    }
-
-    let weekly = pWF;
-    const weeks = months * 4.33;
-    for (let i = 1; i < Math.floor(weeks); i++) {
-      weekly += pWR * Math.pow(1 - churnW, i);
-    }
-    return shareY * yearly + shareM * monthly + shareW * weekly;
+  function activeMonths(months: number): number {
+    return plans.reduce((s, p) => s + planShare(p) * planActiveMonths(p, months), 0);
   }
 
   function netLTV(months: number): number {
     const gltv = grossLTV(months);
-    const yearlyMonths =
-      Math.min(months, 12) + (months >= 12 ? Math.min(months - 12, 12) * renewal : 0);
-    const yearlyCogs = shareY * yearlyMonths * cogs;
-
-    let monthlyCogs = 0;
-    for (let i = 0; i < months; i++) monthlyCogs += cogs * Math.pow(1 - churnM, i);
-    monthlyCogs *= shareM;
-
-    let weeklyCogs = 0;
-    const weeks = months * 4.33;
-    for (let i = 0; i < Math.floor(weeks); i++) {
-      weeklyCogs += (cogs / 4.33) * Math.pow(1 - churnW, i);
-    }
-    weeklyCogs *= shareW;
-
-    return gltv * netMult - yearlyCogs - monthlyCogs - weeklyCogs;
-  }
-
-  function activeMonths(months: number): number {
-    const yM =
-      Math.min(months, 12) + (months >= 12 ? Math.min(months - 12, 12) * renewal : 0);
-    let mSum = 0;
-    for (let i = 0; i < months; i++) mSum += Math.pow(1 - churnM, i);
-    let wSum = 0;
-    const weeks = months * 4.33;
-    for (let i = 0; i < Math.floor(weeks); i++) wSum += Math.pow(1 - churnW, i);
-    return shareY * yM + shareM * mSum + shareW * (wSum / 4.33);
+    const cogsCost = activeMonths(months) * cogs;
+    return gltv * netMult - cogsCost;
   }
 
   function upsellLTV(months: number): number {
@@ -136,6 +127,49 @@ export function compute(raw: Inputs): ComputeResult {
 
   function totalLTV(months: number): number {
     return netLTV(months) + upsellLTV(months);
+  }
+
+  // --- Scenario LTV at month 13 with alternate churn (for max churn target) ---
+  function scenarioLTV13(testChurnM: number): number {
+    const months = 13;
+    // Temporarily substitute churn
+    const alt = (p: Plan): number => {
+      const Pm = p.periodMonths;
+      if (Pm >= 12) return Math.pow(renewal, Pm / 12);
+      if (Pm >= 1) return Math.pow(1 - testChurnM, Pm);
+      // For weekly plans, scale weekly churn proportional to churn change
+      const scale = testChurnM / Math.max(0.001, churnM);
+      const scaledChurnW = Math.min(0.95, churnW * scale);
+      const weeks = Pm * (30.44 / 7);
+      return Math.pow(1 - scaledChurnW, weeks);
+    };
+    const gLtvAlt = (): number =>
+      plans.reduce((s, p) => {
+        const R = alt(p);
+        let rev = introPrice(p);
+        for (let k = 1; k * p.periodMonths <= months; k++) {
+          rev += p.fullPrice * Math.pow(R, k);
+        }
+        return s + planShare(p) * rev;
+      }, 0);
+    const amActive = (): number =>
+      plans.reduce((s, p) => {
+        const R = alt(p);
+        let a = 0;
+        for (let k = 0; k * p.periodMonths < months; k++) {
+          const periodLen = Math.min(p.periodMonths, months - k * p.periodMonths);
+          a += periodLen * Math.pow(R, k);
+        }
+        return s + planShare(p) * a;
+      }, 0);
+    const nltv = gLtvAlt() * netMult - amActive() * cogs;
+    let pack = 0;
+    if (inputs.upsells.packs.enabled) {
+      for (const item of inputs.upsells.packs.items) {
+        pack += item.price * (item.conv / 100) * netMult * amActive();
+      }
+    }
+    return nltv + d0UpsellRev + pack;
   }
 
   // Key metrics
@@ -176,12 +210,10 @@ export function compute(raw: Inputs): ComputeResult {
   const arppuOk = arppuWithD0 >= minARPPU;
   const arppuMargin = ((arppuWithD0 / minARPPU) - 1) * 100;
 
-  // Max churn where LTV13 >= eCPA
-  const safeChurnM = Math.max(0.001, churnM);
+  // Max monthly churn where LTV13 >= eCPA
   let maxChurnM = churnM;
   for (let c = 0.95; c >= 0.01; c -= 0.01) {
-    const testChurnW = Math.min(0.95, churnW * (c / safeChurnM));
-    if (scenarioLTV13(c, testChurnW) >= eCPA) { maxChurnM = c; break; }
+    if (scenarioLTV13(c) >= eCPA) { maxChurnM = c; break; }
   }
   if (maxChurnM < 0.01) maxChurnM = 0.01;
   const churnOk = churnM <= maxChurnM;
@@ -193,44 +225,6 @@ export function compute(raw: Inputs): ComputeResult {
   const arppuForPaybackMargin = minArppuForPayback > 0
     ? ((arppuWithD0 / minArppuForPayback) - 1) * 100
     : 100;
-
-  function scenarioLTV13(tcm: number, tcw: number): number {
-    const testChurnM = tcm;
-    const testChurnW = Math.min(0.95, Math.max(0, tcw));
-    const months = 13;
-    const yearly = pYF + pYR * renewal;
-    let monthly = pMF;
-    for (let i = 1; i < months; i++) monthly += pMR * Math.pow(1 - testChurnM, i);
-    let weekly = pWF;
-    const weeks = months * 4.33;
-    for (let i = 1; i < Math.floor(weeks); i++) weekly += pWR * Math.pow(1 - testChurnW, i);
-    const g = shareY * yearly + shareM * monthly + shareW * weekly;
-
-    const yM = 12 + 1 * renewal;
-    const yearlyCogs = shareY * yM * cogs;
-    let mCogs = 0;
-    for (let i = 0; i < months; i++) mCogs += cogs * Math.pow(1 - testChurnM, i);
-    mCogs *= shareM;
-    let wCogs = 0;
-    for (let i = 0; i < Math.floor(weeks); i++) wCogs += (cogs / 4.33) * Math.pow(1 - testChurnW, i);
-    wCogs *= shareW;
-
-    const nltv = g * netMult - yearlyCogs - mCogs - wCogs;
-
-    let mSum = 0;
-    for (let i = 0; i < months; i++) mSum += Math.pow(1 - testChurnM, i);
-    let wSum = 0;
-    for (let i = 0; i < Math.floor(weeks); i++) wSum += Math.pow(1 - testChurnW, i);
-    const activeM = shareY * yM + shareM * mSum + shareW * (wSum / 4.33);
-
-    let pack = 0;
-    if (inputs.upsells.packs.enabled) {
-      for (const item of inputs.upsells.packs.items) {
-        pack += item.price * (item.conv / 100) * netMult * activeM;
-      }
-    }
-    return nltv + d0UpsellRev + pack;
-  }
 
   // Cohort BE
   const deltaLTV: number[] = [];
@@ -282,48 +276,47 @@ export function compute(raw: Inputs): ComputeResult {
   function sensPaybackAt(cpaDeltaPct: number, churnDeltaPct: number): number | null {
     const testCPA = eCPA * (1 + cpaDeltaPct / 100);
     const testChurnM = churnM * (1 + churnDeltaPct / 100);
-    const testChurnW = Math.min(0.95, churnW * (1 + churnDeltaPct / 100));
     for (let m = 0; m <= 13; m++) {
       let v: number;
       if (m === 0) v = arppuWithD0;
-      else v = scenarioLTVm(m, testChurnM, testChurnW);
+      else v = sensLtvAt(m, testChurnM);
       if (v >= testCPA) return m;
     }
     return null;
   }
 
-  function scenarioLTVm(months: number, tcm: number, tcw: number): number {
-    let yearly = pYF;
-    if (months >= 12) yearly += pYR * renewal;
-    let monthly = pMF;
-    for (let i = 1; i < months; i++) monthly += pMR * Math.pow(1 - tcm, i);
-    let weekly = pWF;
-    const weeks = months * 4.33;
-    for (let i = 1; i < Math.floor(weeks); i++) weekly += pWR * Math.pow(1 - tcw, i);
-    const g = shareY * yearly + shareM * monthly + shareW * weekly;
-
-    const yM =
-      Math.min(months, 12) + (months >= 12 ? Math.min(months - 12, 12) * renewal : 0);
-    const yearlyCogs = shareY * yM * cogs;
-    let mCogs = 0;
-    for (let i = 0; i < months; i++) mCogs += cogs * Math.pow(1 - tcm, i);
-    mCogs *= shareM;
-    let wCogs = 0;
-    for (let i = 0; i < Math.floor(weeks); i++) wCogs += (cogs / 4.33) * Math.pow(1 - tcw, i);
-    wCogs *= shareW;
-
-    const nltv = g * netMult - yearlyCogs - mCogs - wCogs;
-
-    let mSum = 0;
-    for (let i = 0; i < months; i++) mSum += Math.pow(1 - tcm, i);
-    let wSum = 0;
-    for (let i = 0; i < Math.floor(weeks); i++) wSum += Math.pow(1 - tcw, i);
-    const activeM = shareY * yM + shareM * mSum + shareW * (wSum / 4.33);
-
+  function sensLtvAt(months: number, testChurnM: number): number {
+    const alt = (p: Plan): number => {
+      const Pm = p.periodMonths;
+      if (Pm >= 12) return Math.pow(renewal, Pm / 12);
+      if (Pm >= 1) return Math.pow(1 - testChurnM, Pm);
+      const scale = testChurnM / Math.max(0.001, churnM);
+      const sw = Math.min(0.95, churnW * scale);
+      const weeks = Pm * (30.44 / 7);
+      return Math.pow(1 - sw, weeks);
+    };
+    const g = plans.reduce((s, p) => {
+      const R = alt(p);
+      let rev = introPrice(p);
+      for (let k = 1; k * p.periodMonths <= months; k++) {
+        rev += p.fullPrice * Math.pow(R, k);
+      }
+      return s + planShare(p) * rev;
+    }, 0);
+    const am = plans.reduce((s, p) => {
+      const R = alt(p);
+      let a = 0;
+      for (let k = 0; k * p.periodMonths < months; k++) {
+        const periodLen = Math.min(p.periodMonths, months - k * p.periodMonths);
+        a += periodLen * Math.pow(R, k);
+      }
+      return s + planShare(p) * a;
+    }, 0);
+    const nltv = g * netMult - am * cogs;
     let pack = 0;
     if (inputs.upsells.packs.enabled) {
       for (const item of inputs.upsells.packs.items) {
-        pack += item.price * (item.conv / 100) * netMult * activeM;
+        pack += item.price * (item.conv / 100) * netMult * am;
       }
     }
     return nltv + d0UpsellRev + pack;
@@ -333,7 +326,7 @@ export function compute(raw: Inputs): ComputeResult {
     mode: inputs.mode,
     isSaas,
 
-    shareY, shareM, shareW,
+    shareY,
 
     arppuGrossD0, arppuGrossFull, arppuNetD0,
     d0UpsellRev, arppuWithD0,
@@ -364,7 +357,6 @@ export function compute(raw: Inputs): ComputeResult {
 }
 
 function normalize(inputs: Inputs): Inputs {
-  // Clamp a few guard values
   const clone = structuredClone(inputs);
   clone.totalBudget = Math.max(0, clone.totalBudget || 0);
   clone.renewal = clamp(clone.renewal, 0, 100);
@@ -387,7 +379,6 @@ function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
 }
 
-// --- format helpers used across UI ---
 export const fmt = (n: number, d = 2): string => {
   if (!isFinite(n)) return '—';
   const sign = n < 0 ? '-' : '';

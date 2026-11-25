@@ -16,28 +16,29 @@ export interface UpsellConfig {
   items: UpsellItem[];
 }
 
+export interface Plan {
+  id: string;             // stable key for React lists
+  label: string;          // user-visible label
+  periodMonths: number;   // 0.23 week, 1 month, 3 quarter, 6 semi, 12 year, 24 2yr, etc.
+  introPrice: number;
+  fullPrice: number;
+  share: number;          // 0-100, normalized across all plans at compute time
+}
+
 export interface Inputs {
   mode: Mode;
 
   totalBudget: number;
 
-  // Pricing (prepared for v2 generalization — flexible plans later)
   introPricing: boolean;
-  priceYearlyFirst: number;
-  priceYearlyFull: number;
-  priceMonthlyFirst: number;
-  priceMonthlyFull: number;
-  priceWeeklyFirst: number;
-  priceWeeklyFull: number;
+  plans: Plan[];
 
-  shareYearly: number;   // 0-100
-  shareMonthly: number;  // 0-100
+  renewal: number;  // 0-100 (used for plans with periodMonths >= 12)
+  churnM: number;   // 0-100 (used for plans with 1 <= periodMonths < 12)
+  churnW: number;   // 0-100 (used for plans with periodMonths < 1)
 
-  renewal: number;  // 0-100
-  churnM: number;   // 0-100
-  churnW: number;   // 0-100
-
-  storeFee: number;    // 0-100
+  processor: string;   // processor id; 'custom' means user-set fee
+  storeFee: number;    // 0-100 (effective fee, driven by processor unless 'custom')
   refundRate: number;  // 0-100
   cogs: number;        // $/user/month
 
@@ -65,10 +66,8 @@ export interface ComputeResult {
   mode: Mode;
   isSaas: boolean;
 
-  // Derived shares (normalized)
+  // Share of long (>=12mo) plans — used by diagnostics
   shareY: number;
-  shareM: number;
-  shareW: number;
 
   // Pricing metrics
   arppuGrossD0: number;

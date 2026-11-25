@@ -1,9 +1,11 @@
-import type { Inputs } from '../engine/types';
+import type { Inputs, Plan } from '../engine/types';
 import type { I18N } from '../i18n/strings';
 import { Panel } from './Panel';
 import { Field, NumField, Slider, Switch } from './fields';
+import { PROCESSORS, processorById } from '../engine/processors';
+import { PERIODS, matchPeriod } from '../engine/periods';
 import {
-  CurrencyDollar, CreditCard, TrendDown, Coins, Target, Rocket
+  CurrencyDollar, CreditCard, TrendDown, Coins, Target, Rocket, Trash
 } from '@phosphor-icons/react';
 
 interface SidebarProps {
@@ -16,10 +18,29 @@ const ICON = { size: 15, weight: 'duotone' as const };
 
 export function Sidebar({ inputs, set, t }: SidebarProps) {
   const isSaas = inputs.mode === 'saas';
-  const shareW = isSaas ? 0 : Math.max(0, 100 - inputs.shareYearly - inputs.shareMonthly);
 
   const setUpsell = (kind: 'd0' | 'packs', patch: Partial<typeof inputs.upsells.d0>) => {
     set('upsells', { ...inputs.upsells, [kind]: { ...inputs.upsells[kind], ...patch } });
+  };
+
+  const updatePlan = (id: string, patch: Partial<Plan>) => {
+    set('plans', inputs.plans.map((p) => p.id === id ? { ...p, ...patch } : p));
+  };
+  const addPlan = () => {
+    const newId = 'plan-' + Date.now();
+    set('plans', [...inputs.plans, {
+      id: newId, label: 'New plan', periodMonths: 1, introPrice: 9.99, fullPrice: 14.99, share: 0
+    }]);
+  };
+  const removePlan = (id: string) => {
+    if (inputs.plans.length <= 1) return;
+    set('plans', inputs.plans.filter((p) => p.id !== id));
+  };
+
+  const pickProcessor = (id: string) => {
+    const proc = processorById(id);
+    set('processor', id);
+    if (id !== 'custom') set('storeFee', proc.fee);
   };
 
   return (
@@ -36,80 +57,55 @@ export function Sidebar({ inputs, set, t }: SidebarProps) {
           onChange={(v) => set('introPricing', v)}
           label={t.introPricing}
         />
-        {inputs.introPricing && (
-          <div className="rounded-[var(--radius-sm)] bg-[var(--color-accent-500)]/10 border border-[var(--color-accent-500)]/30 p-2.5 space-y-2.5">
-            <div className="text-[10px] font-semibold tracking-wider uppercase text-[var(--color-accent-300)]">
-              {t.firstPayment}
-            </div>
-            <div className={isSaas ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-3 gap-2'}>
-              <Field label={t.yearly}>
-                <NumField value={inputs.priceYearlyFirst} onChange={(v) => set('priceYearlyFirst', v)} step={1} prefix="$" />
-              </Field>
-              <Field label={t.monthly}>
-                <NumField value={inputs.priceMonthlyFirst} onChange={(v) => set('priceMonthlyFirst', v)} step={1} prefix="$" />
-              </Field>
-              {!isSaas && (
-                <Field label={t.weekly}>
-                  <NumField value={inputs.priceWeeklyFirst} onChange={(v) => set('priceWeeklyFirst', v)} step={0.5} prefix="$" />
-                </Field>
-              )}
-            </div>
-          </div>
-        )}
-        <div className="rounded-[var(--radius-sm)] bg-[var(--color-surface-1)] border border-[var(--color-border-subtle)] p-2.5 space-y-2.5">
-          <div className="text-[10px] font-semibold tracking-wider uppercase text-[var(--color-text-3)]">
-            {t.rebill}
-          </div>
-          <div className={isSaas ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-3 gap-2'}>
-            <Field label={t.yearly}>
-              <NumField value={inputs.priceYearlyFull} onChange={(v) => set('priceYearlyFull', v)} step={1} prefix="$" />
-            </Field>
-            <Field label={t.monthly}>
-              <NumField value={inputs.priceMonthlyFull} onChange={(v) => set('priceMonthlyFull', v)} step={1} prefix="$" />
-            </Field>
-            {!isSaas && (
-              <Field label={t.weekly}>
-                <NumField value={inputs.priceWeeklyFull} onChange={(v) => set('priceWeeklyFull', v)} step={0.5} prefix="$" />
-              </Field>
-            )}
-          </div>
-        </div>
-
-        <div className="pt-1 space-y-2.5">
-          <div className="text-[10px] font-semibold tracking-wider uppercase text-[var(--color-text-3)]">
-            {t.planMix}
-          </div>
-          <Field label={`${t.yearly} %`}>
-            <Slider value={inputs.shareYearly} onChange={(v) => set('shareYearly', v)} />
-          </Field>
-          <Field label={`${t.monthly} %`}>
-            <Slider value={inputs.shareMonthly} onChange={(v) => set('shareMonthly', v)} />
-          </Field>
-          {!isSaas && (
-            <Field label={`${t.weekly} %`}>
-              <Slider value={shareW} onChange={() => {}} disabled />
-            </Field>
-          )}
+        <div className="space-y-2">
+          {inputs.plans.map((p) => (
+            <PlanRow
+              key={p.id}
+              plan={p}
+              showIntro={inputs.introPricing}
+              onChange={(patch) => updatePlan(p.id, patch)}
+              onRemove={() => removePlan(p.id)}
+              canRemove={inputs.plans.length > 1}
+            />
+          ))}
+          <button
+            type="button"
+            onClick={addPlan}
+            className="w-full py-1.5 text-[11px] font-medium text-[var(--color-text-3)] rounded-[var(--radius-xs)] border border-dashed border-[var(--color-border)] hover:border-[var(--color-accent-500)]/50 hover:text-[var(--color-text-2)]"
+          >
+            + Add plan
+          </button>
         </div>
       </Panel>
 
       <Panel title={t.pRetention} icon={<TrendDown {...ICON} />}>
-        <Field label={t.renewal}>
+        <Field label={t.renewal} hint="period ≥ 12 mo">
           <Slider value={inputs.renewal} onChange={(v) => set('renewal', v)} min={10} max={98} />
         </Field>
-        <Field label={t.churnM}>
+        <Field label={t.churnM} hint="period 1–11 mo">
           <Slider value={inputs.churnM} onChange={(v) => set('churnM', v)} min={1} max={80} />
         </Field>
         {!isSaas && (
-          <Field label={t.churnW}>
+          <Field label={t.churnW} hint="period < 1 mo">
             <Slider value={inputs.churnW} onChange={(v) => set('churnW', v)} min={5} max={90} />
           </Field>
         )}
       </Panel>
 
       <Panel title={t.pCosts} icon={<Coins {...ICON} />}>
-        <Field label={isSaas ? t.storeFeeSaas : t.storeFeeMobile}>
-          <Slider value={inputs.storeFee} onChange={(v) => set('storeFee', v)} min={0} max={isSaas ? 10 : 30} />
+        <Field label="Payment processor">
+          <Select
+            value={inputs.processor}
+            onChange={pickProcessor}
+            options={PROCESSORS.map((p) => ({ value: p.id, label: p.label, note: p.note }))}
+          />
+        </Field>
+        <Field label={`Effective fee (${inputs.processor === 'custom' ? 'manual' : 'auto'})`}>
+          <Slider
+            value={inputs.storeFee}
+            onChange={(v) => { set('storeFee', v); set('processor', 'custom'); }}
+            min={0} max={35}
+          />
         </Field>
         <Field label={t.refundRate}>
           <Slider value={inputs.refundRate} onChange={(v) => set('refundRate', v)} min={0} max={20} />
@@ -158,10 +154,87 @@ export function Sidebar({ inputs, set, t }: SidebarProps) {
           cfg={inputs.upsells.packs}
           onChange={(patch) => setUpsell('packs', patch)}
           addLabel={t.addPack}
-          isPack
         />
       </Panel>
     </aside>
+  );
+}
+
+interface PlanRowProps {
+  plan: Plan;
+  showIntro: boolean;
+  onChange: (patch: Partial<Plan>) => void;
+  onRemove: () => void;
+  canRemove: boolean;
+}
+
+function PlanRow({ plan, showIntro, onChange, onRemove, canRemove }: PlanRowProps) {
+  const matched = matchPeriod(plan.periodMonths);
+  return (
+    <div className="rounded-[var(--radius-sm)] bg-[var(--color-surface-1)] border border-[var(--color-border-subtle)] p-2.5 space-y-2">
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={plan.label}
+          onChange={(e) => onChange({ label: e.target.value })}
+          className="flex-1 bg-transparent text-[12px] font-medium focus:outline-none"
+        />
+        {canRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="w-5 h-5 grid place-items-center text-[var(--color-text-dim)] hover:text-[var(--color-bad)]"
+            aria-label="remove plan"
+          >
+            <Trash size={11} weight="duotone" />
+          </button>
+        )}
+      </div>
+
+      <Field label="Period">
+        <Select
+          value={matched?.id ?? 'custom'}
+          onChange={(id) => {
+            const preset = PERIODS.find((p) => p.id === id);
+            if (preset) onChange({ periodMonths: preset.periodMonths });
+          }}
+          options={[
+            ...PERIODS.map((p) => ({ value: p.id, label: p.label })),
+            { value: 'custom', label: `Custom (${plan.periodMonths.toFixed(2)} mo)` }
+          ]}
+        />
+      </Field>
+
+      <div className={showIntro ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-1'}>
+        {showIntro && (
+          <Field label="First payment">
+            <NumField value={plan.introPrice} onChange={(v) => onChange({ introPrice: v })} step={1} prefix="$" min={0} />
+          </Field>
+        )}
+        <Field label={showIntro ? 'Rebill' : 'Price'}>
+          <NumField value={plan.fullPrice} onChange={(v) => onChange({ fullPrice: v })} step={1} prefix="$" min={0} />
+        </Field>
+      </div>
+
+      <Field label="Share %">
+        <Slider value={plan.share} onChange={(v) => onChange({ share: v })} />
+      </Field>
+    </div>
+  );
+}
+
+interface SelectOpt { value: string; label: string; note?: string; }
+function Select({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: SelectOpt[] }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-[var(--radius-sm)] px-2.5 py-1.5 text-[12px] focus:outline-none focus:border-[var(--color-accent-500)]"
+    >
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}{o.note ? ` — ${o.note}` : ''}</option>
+      ))}
+    </select>
   );
 }
 
@@ -203,7 +276,6 @@ interface UpsellListProps {
   cfg: { enabled: boolean; items: { price: number; conv: number }[] };
   onChange: (patch: Partial<UpsellListProps['cfg']>) => void;
   addLabel: string;
-  isPack?: boolean;
 }
 function UpsellList({ label, cfg, onChange, addLabel }: UpsellListProps) {
   const upd = (idx: number, field: 'price' | 'conv', v: number) => {
