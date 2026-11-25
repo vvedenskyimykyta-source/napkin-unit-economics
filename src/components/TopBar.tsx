@@ -1,12 +1,17 @@
 import { DeviceMobile, Browsers } from '@phosphor-icons/react';
 import type { Mode } from '../engine/types';
+import type { I18N, Lang } from '../i18n/strings';
+import { clsx } from 'clsx';
 
 interface TopBarProps {
   mode: Mode;
   onModeChange: (m: Mode) => void;
+  lang: Lang;
+  onLangChange: (l: Lang) => void;
+  t: I18N;
 }
 
-export function TopBar({ mode, onModeChange }: TopBarProps) {
+export function TopBar({ mode, onModeChange, lang, onLangChange, t }: TopBarProps) {
   return (
     <header className="h-14 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-0)]/80 backdrop-blur-md sticky top-0 z-40">
       <div className="h-full px-5 lg:px-8 flex items-center justify-between gap-4">
@@ -22,12 +27,13 @@ export function TopBar({ mode, onModeChange }: TopBarProps) {
           </div>
         </div>
 
-        <ModeToggle mode={mode} onChange={onModeChange} />
+        <ModeToggle mode={mode} onChange={onModeChange} t={t} />
 
-        <div className="hidden md:flex items-center gap-2 text-xs text-[var(--color-text-3)]">
+        <div className="flex items-center gap-3">
+          <LangToggle lang={lang} onChange={onLangChange} />
           <a href="https://github.com/vvedenskyimykyta-source/napkin-unit-economics"
              target="_blank" rel="noopener"
-             className="hover:text-[var(--color-text)] transition-colors">
+             className="hidden md:inline text-xs text-[var(--color-text-3)] hover:text-[var(--color-text)] transition-colors">
             GitHub
           </a>
         </div>
@@ -36,17 +42,37 @@ export function TopBar({ mode, onModeChange }: TopBarProps) {
   );
 }
 
+function LangToggle({ lang, onChange }: { lang: Lang; onChange: (l: Lang) => void }) {
+  return (
+    <div className="inline-flex p-0.5 rounded-full bg-[var(--color-surface-1)] border border-[var(--color-border-subtle)]">
+      {(['en', 'uk'] as const).map((l) => (
+        <button
+          key={l}
+          onClick={() => onChange(l)}
+          className={clsx(
+            'px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase transition',
+            lang === l ? 'bg-[var(--color-surface-3)] text-[var(--color-text)]' : 'text-[var(--color-text-3)] hover:text-[var(--color-text-2)]'
+          )}
+        >
+          {l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 interface ModeToggleProps {
   mode: Mode;
   onChange: (m: Mode) => void;
+  t: I18N;
 }
 
-function ModeToggle({ mode, onChange }: ModeToggleProps) {
+function ModeToggle({ mode, onChange, t }: ModeToggleProps) {
   return (
     <div className="inline-flex p-1 rounded-full bg-[var(--color-surface-1)] border border-[var(--color-border-subtle)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
       <button
         onClick={() => onChange('mobile')}
-        className={cn(
+        className={clsx(
           'px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all',
           mode === 'mobile'
             ? 'bg-[var(--color-surface-3)] text-[var(--color-text)] shadow-sm'
@@ -54,11 +80,11 @@ function ModeToggle({ mode, onChange }: ModeToggleProps) {
         )}
       >
         <DeviceMobile size={13} weight="duotone" />
-        Mobile
+        {t.modeMobile}
       </button>
       <button
         onClick={() => onChange('saas')}
-        className={cn(
+        className={clsx(
           'px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all',
           mode === 'saas'
             ? 'bg-[var(--color-surface-3)] text-[var(--color-text)] shadow-sm'
@@ -66,12 +92,8 @@ function ModeToggle({ mode, onChange }: ModeToggleProps) {
         )}
       >
         <Browsers size={13} weight="duotone" />
-        Web & SaaS
+        {t.modeSaas}
       </button>
     </div>
   );
-}
-
-function cn(...v: (string | false | undefined)[]): string {
-  return v.filter(Boolean).join(' ');
 }
