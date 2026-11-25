@@ -4,6 +4,7 @@ import { Panel } from './Panel';
 import { Field, NumField, Slider, Switch } from './fields';
 import { PROCESSORS, processorById } from '../engine/processors';
 import { PERIODS, matchPeriod } from '../engine/periods';
+import { nicheById } from '../engine/niches';
 import {
   CurrencyDollar, CreditCard, TrendDown, Coins, Target, Rocket, Trash
 } from '@phosphor-icons/react';
@@ -18,6 +19,8 @@ const ICON = { size: 15, weight: 'duotone' as const };
 
 export function Sidebar({ inputs, set, t }: SidebarProps) {
   const isSaas = inputs.mode === 'saas';
+  const niche = nicheById(inputs.niche);
+  const b = niche?.bench;
 
   const setUpsell = (kind: 'd0' | 'packs', patch: Partial<typeof inputs.upsells.d0>) => {
     set('upsells', { ...inputs.upsells, [kind]: { ...inputs.upsells[kind], ...patch } });
@@ -80,10 +83,12 @@ export function Sidebar({ inputs, set, t }: SidebarProps) {
 
       <Panel title={t.pRetention} icon={<TrendDown {...ICON} />}>
         <Field label={t.renewal} hint="period ≥ 12 mo">
-          <Slider value={inputs.renewal} onChange={(v) => set('renewal', v)} min={10} max={98} />
+          <Slider value={inputs.renewal} onChange={(v) => set('renewal', v)} min={10} max={98}
+            band={b ? b.yearlyRenewal : undefined} />
         </Field>
         <Field label={t.churnM} hint="period 1–11 mo">
-          <Slider value={inputs.churnM} onChange={(v) => set('churnM', v)} min={1} max={80} />
+          <Slider value={inputs.churnM} onChange={(v) => set('churnM', v)} min={1} max={80}
+            band={b ? b.monthlyChurn : undefined} />
         </Field>
         {!isSaas && (
           <Field label={t.churnW} hint="period < 1 mo">
@@ -123,6 +128,8 @@ export function Sidebar({ inputs, set, t }: SidebarProps) {
           share={inputs.webShare} onShare={(v) => set('webShare', v)}
           cpa={inputs.webCPA} onCpa={(v) => set('webCPA', v)}
           conv={inputs.webConv} onConv={(v) => set('webConv', v)}
+          cpaBand={b ? b.cpa : undefined}
+          convBand={b ? b.paywallConv : undefined}
           t={t}
         />
         <ChannelBlock
@@ -132,6 +139,8 @@ export function Sidebar({ inputs, set, t }: SidebarProps) {
           share={inputs.appShare} onShare={(v) => set('appShare', v)}
           cpa={inputs.appCPA} onCpa={(v) => set('appCPA', v)}
           conv={inputs.appConv} onConv={(v) => set('appConv', v)}
+          cpaBand={b ? b.cpa : undefined}
+          convBand={b ? b.paywallConv : undefined}
           t={t}
         />
         <Field label={<span>{t.organic} <span className="text-[var(--color-text-3)]">({t.organicSub})</span></span>}>
@@ -245,9 +254,11 @@ interface ChannelBlockProps {
   share: number; onShare: (v: number) => void;
   cpa: number; onCpa: (v: number) => void;
   conv: number; onConv: (v: number) => void;
+  cpaBand?: { low: number; mid: number; high: number };
+  convBand?: { low: number; mid: number; high: number };
   t: I18N;
 }
-function ChannelBlock({ name, enabled, onToggle, share, onShare, cpa, onCpa, conv, onConv, t }: ChannelBlockProps) {
+function ChannelBlock({ name, enabled, onToggle, share, onShare, cpa, onCpa, conv, onConv, cpaBand, convBand, t }: ChannelBlockProps) {
   return (
     <div className="rounded-[var(--radius-sm)] bg-[var(--color-surface-1)] border border-[var(--color-border-subtle)] p-2.5 space-y-2.5">
       <div className="flex items-center justify-between">
@@ -261,9 +272,19 @@ function ChannelBlock({ name, enabled, onToggle, share, onShare, cpa, onCpa, con
         <div className="grid grid-cols-2 gap-2 mt-2">
           <Field label={t.cpa}>
             <NumField value={cpa} onChange={onCpa} step={1} prefix="$" />
+            {cpaBand && (
+              <div className="text-[10px] mono text-[var(--color-info)]/70 mt-1">
+                niche ${cpaBand.low}–${cpaBand.high}
+              </div>
+            )}
           </Field>
           <Field label={t.paywallConv}>
             <NumField value={conv} onChange={onConv} step={0.1} />
+            {convBand && (
+              <div className="text-[10px] mono text-[var(--color-info)]/70 mt-1">
+                niche {convBand.low}–{convBand.high}%
+              </div>
+            )}
           </Field>
         </div>
       </div>

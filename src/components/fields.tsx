@@ -56,42 +56,77 @@ interface SliderProps {
   step?: number;
   suffix?: string;
   disabled?: boolean;
+  /** Benchmark band (low/mid/high) to show as a translucent overlay */
+  band?: { low: number; mid: number; high: number };
 }
 
-export function Slider({ value, onChange, min = 0, max = 100, step = 1, suffix = '%', disabled }: SliderProps) {
+export function Slider({ value, onChange, min = 0, max = 100, step = 1, suffix = '%', disabled, band }: SliderProps) {
   const pct = ((value - min) / (max - min)) * 100;
+  const bandLo = band ? Math.max(0, ((band.low - min) / (max - min)) * 100) : null;
+  const bandHi = band ? Math.min(100, ((band.high - min) / (max - min)) * 100) : null;
+  const bandMid = band ? ((band.mid - min) / (max - min)) * 100 : null;
+
   return (
     <div className={clsx('space-y-1.5', disabled && 'opacity-40')}>
-      <div className="flex items-center justify-between gap-2">
-        <input
-          type="range"
-          value={value}
-          onChange={(e) => onChange(parseFloat(e.target.value))}
-          min={min}
-          max={max}
-          step={step}
-          disabled={disabled}
-          style={{
-            background: `linear-gradient(to right,
-              var(--color-accent-500) 0%, var(--color-accent-500) ${pct}%,
-              var(--color-surface-3) ${pct}%, var(--color-surface-3) 100%)`
-          }}
-          className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer accent-emerald-500
-            [&::-webkit-slider-thumb]:appearance-none
-            [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
-            [&::-webkit-slider-thumb]:rounded-full
-            [&::-webkit-slider-thumb]:bg-[var(--color-text)]
-            [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[var(--color-accent-500)]
-            [&::-webkit-slider-thumb]:cursor-pointer
-            [&::-webkit-slider-thumb]:shadow-md
-            [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5
-            [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-[var(--color-text)]
-            [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-[var(--color-accent-500)]"
-        />
+      <div className="relative flex items-center gap-2">
+        <div className="flex-1 relative h-3.5 flex items-center">
+          {band && bandLo !== null && bandHi !== null && (
+            <div
+              className="absolute h-2 rounded-full pointer-events-none"
+              style={{
+                left: `${bandLo}%`,
+                width: `${bandHi - bandLo}%`,
+                background: 'var(--color-info)',
+                opacity: 0.18
+              }}
+              title={`Norm: ${band.low}–${band.high}`}
+            />
+          )}
+          {band && bandMid !== null && (
+            <div
+              className="absolute w-0.5 h-3 pointer-events-none"
+              style={{
+                left: `calc(${bandMid}% - 1px)`,
+                background: 'var(--color-info)',
+                opacity: 0.5
+              }}
+            />
+          )}
+          <input
+            type="range"
+            value={value}
+            onChange={(e) => onChange(parseFloat(e.target.value))}
+            min={min}
+            max={max}
+            step={step}
+            disabled={disabled}
+            style={{
+              background: `linear-gradient(to right,
+                var(--color-accent-500) 0%, var(--color-accent-500) ${pct}%,
+                var(--color-surface-3) ${pct}%, var(--color-surface-3) 100%)`
+            }}
+            className="relative w-full h-1.5 rounded-full appearance-none cursor-pointer
+              [&::-webkit-slider-thumb]:appearance-none
+              [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5
+              [&::-webkit-slider-thumb]:rounded-full
+              [&::-webkit-slider-thumb]:bg-[var(--color-text)]
+              [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[var(--color-accent-500)]
+              [&::-webkit-slider-thumb]:cursor-pointer
+              [&::-webkit-slider-thumb]:shadow-md
+              [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5
+              [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-[var(--color-text)]
+              [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-[var(--color-accent-500)]"
+          />
+        </div>
         <span className="text-[11px] mono font-medium text-[var(--color-text)] tabular min-w-[42px] text-right">
           {value.toFixed(step < 1 ? 1 : 0)}{suffix}
         </span>
       </div>
+      {band && (
+        <div className="text-[10px] mono text-[var(--color-info)]/70 tabular">
+          norm {band.low}–{band.high}{suffix} (median {band.mid}{suffix})
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import type { Inputs, Mode, Plan } from './types';
 import { defaultProcessorFor, processorById } from './processors';
+import { defaultNicheFor, nicheById } from './niches';
 
 const mobilePlans = (): Plan[] => [
   { id: 'yearly',  label: 'Yearly',  periodMonths: 12,   introPrice: 44,   fullPrice: 89,   share: 60 },
@@ -12,7 +13,7 @@ const saasPlans = (): Plan[] => [
   { id: 'monthly', label: 'Monthly', periodMonths: 1,  introPrice: 29,  fullPrice: 49,  share: 65 }
 ];
 
-const BASE: Omit<Inputs, 'mode' | 'plans' | 'processor' | 'storeFee'> = {
+const BASE: Omit<Inputs, 'mode' | 'niche' | 'plans' | 'processor' | 'storeFee'> = {
   totalBudget: 50000,
   introPricing: true,
   renewal: 55,
@@ -37,6 +38,7 @@ const BASE: Omit<Inputs, 'mode' | 'plans' | 'processor' | 'storeFee'> = {
 
 const MOBILE: Inputs = {
   mode: 'mobile',
+  niche: defaultNicheFor('mobile'),
   ...BASE,
   plans: mobilePlans(),
   processor: defaultProcessorFor('mobile'),
@@ -45,6 +47,7 @@ const MOBILE: Inputs = {
 
 const SAAS: Inputs = {
   mode: 'saas',
+  niche: defaultNicheFor('saas'),
   ...BASE,
   totalBudget: 60000,
   plans: saasPlans(),
@@ -69,5 +72,46 @@ const SAAS: Inputs = {
 export function getPreset(mode: Mode): Inputs {
   return structuredClone(mode === 'saas' ? SAAS : MOBILE);
 }
+
+/**
+ * Apply a niche's benchmark medians to the current Inputs.
+ * Only overwrites fields the niche actually covers.
+ */
+export function applyNiche(inputs: Inputs, nicheId: string): Inputs {
+  const n = nicheById(nicheId);
+  if (!n) return inputs;
+  const out = structuredClone(inputs);
+  out.niche = nicheId;
+
+  const b = n.bench;
+  out.monthlyChurnMid = b.monthlyChurn.mid;
+  out.churnM = b.monthlyChurn.mid;
+  out.renewal = b.yearlyRenewal.mid;
+
+  if (b.arppuYearly) {
+    const yearlyPlan = out.plans.find((p) => p.periodMonths >= 12);
+    if (yearlyPlan) {
+      yearlyPlan.fullPrice = b.arppuYearly.mid;
+      yearlyPlan.introPrice = Math.round(b.arppuYearly.mid * 0.5);
+    }
+  }
+  if (b.arppuMonthly) {
+    const monthlyPlan = out.plans.find((p) => p.periodMonths >= 1 && p.periodMonths < 12);
+    if (monthlyPlan) {
+      monthlyPlan.fullPrice = b.arppuMonthly.mid;
+      monthlyPlan.introPrice = Math.round(b.arppuMonthly.mid * 0.5);
+    }
+  }
+
+  out.webCPA = Math.round(b.cpa.mid * 1.3);  // web typically 30% above median
+  out.appCPA = Math.round(b.cpa.mid * 0.8);
+  out.webConv = b.paywallConv.mid * 0.5;
+  out.appConv = b.paywallConv.mid * 1.5;
+
+  return out;
+}
+
+// helper field only used for UI benchmark bands — derived
+export type InputsWithNiche = Inputs & { monthlyChurnMid?: number };
 
 export type { Mode };

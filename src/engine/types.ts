@@ -27,6 +27,10 @@ export interface Plan {
 
 export interface Inputs {
   mode: Mode;
+  niche: string;  // niche id, defines benchmark bands shown on sliders
+
+  // transient (set by applyNiche; used by diagnostics/UI; never user-edited directly)
+  monthlyChurnMid?: number;
 
   totalBudget: number;
 

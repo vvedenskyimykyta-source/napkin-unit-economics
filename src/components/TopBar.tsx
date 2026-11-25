@@ -9,9 +9,10 @@ interface TopBarProps {
   lang: Lang;
   onLangChange: (l: Lang) => void;
   t: I18N;
+  children?: React.ReactNode;
 }
 
-export function TopBar({ mode, onModeChange, lang, onLangChange, t }: TopBarProps) {
+export function TopBar({ mode, onModeChange, lang, onLangChange, t, children }: TopBarProps) {
   return (
     <header className="h-14 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-0)]/80 backdrop-blur-md sticky top-0 z-40">
       <div className="h-full px-5 lg:px-8 flex items-center justify-between gap-4">
@@ -27,7 +28,10 @@ export function TopBar({ mode, onModeChange, lang, onLangChange, t }: TopBarProp
           </div>
         </div>
 
-        <ModeToggle mode={mode} onChange={onModeChange} t={t} />
+        <div className="flex items-center gap-3">
+          <ModeToggle mode={mode} onChange={onModeChange} t={t} />
+          {children}
+        </div>
 
         <div className="flex items-center gap-3">
           <LangToggle lang={lang} onChange={onLangChange} />

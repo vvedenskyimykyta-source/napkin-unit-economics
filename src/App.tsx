@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { compute } from './engine/calc';
-import { getPreset, type Mode } from './engine/presets';
+import { getPreset, applyNiche, type Mode } from './engine/presets';
 import type { Inputs } from './engine/types';
 import { strings, type Lang } from './i18n/strings';
 import { TopBar } from './components/TopBar';
 import { Sidebar } from './components/Sidebar';
+import { NicheSelector } from './components/NicheSelector';
 import { KPITiles } from './components/KPITiles';
 import { Diagnostics } from './components/Diagnostics';
 import { Forecast } from './components/Forecast';
@@ -31,11 +32,17 @@ export default function App() {
     setInputs(getPreset(m));
   };
 
+  const changeNiche = (nicheId: string) => {
+    setInputs((prev) => applyNiche(prev, nicheId));
+  };
+
   const result = useMemo(() => compute(inputs), [inputs]);
 
   return (
     <div className="min-h-[100dvh] flex flex-col">
-      <TopBar mode={mode} onModeChange={changeMode} lang={lang} onLangChange={setLang} t={t} />
+      <TopBar mode={mode} onModeChange={changeMode} lang={lang} onLangChange={setLang} t={t}>
+        <NicheSelector mode={mode} value={inputs.niche} onChange={changeNiche} />
+      </TopBar>
 
       <div className="flex-1 grid lg:grid-cols-[340px_1fr] min-h-0">
         <Sidebar inputs={inputs} set={set} t={t} />
