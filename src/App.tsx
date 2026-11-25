@@ -17,9 +17,14 @@ import { SensHeatmap } from './components/charts/SensHeatmap';
 import { PnlBars } from './components/charts/PnlBars';
 import { Waterfall } from './components/charts/Waterfall';
 import { BaselineBar } from './components/BaselineBar';
+import { OnboardingWizard } from './components/OnboardingWizard';
+import { BaselineModal } from './components/BaselineModal';
+import { InstructionsDrawer } from './components/InstructionsDrawer';
+import { ExportMenu } from './components/ExportMenu';
 
 const LS_BASELINE = 'napkin.baseline.v1';
 const LS_SIDEBAR_WIDTH = 'napkin.sidebarWidth.v1';
+const LS_ONBOARDED = 'napkin.onboarded.v1';
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('mobile');
@@ -43,6 +48,11 @@ export default function App() {
       return null;
     }
   });
+  const [onboarded, setOnboarded] = useState<boolean>(() => {
+    try { return localStorage.getItem(LS_ONBOARDED) === '1'; } catch { return false; }
+  });
+  const [baselineModalOpen, setBaselineModalOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const t = strings(lang);
 
@@ -59,14 +69,21 @@ export default function App() {
     setInputs((prev) => applyNiche(prev, nicheId));
   };
 
-  const setBaseline = () => {
-    const snap = structuredClone(inputs);
-    setBaselineInputs(snap);
-    try { localStorage.setItem(LS_BASELINE, JSON.stringify(snap)); } catch {}
-  };
   const clearBaseline = () => {
     setBaselineInputs(null);
     try { localStorage.removeItem(LS_BASELINE); } catch {}
+  };
+  const saveBaselineFromModal = (next: Inputs) => {
+    setBaselineInputs(next);
+    try { localStorage.setItem(LS_BASELINE, JSON.stringify(next)); } catch {}
+    setBaselineModalOpen(false);
+  };
+
+  const finishOnboarding = (m: Mode, nicheId: string) => {
+    setMode(m);
+    setInputs(applyNiche(getPreset(m), nicheId));
+    setOnboarded(true);
+    try { localStorage.setItem(LS_ONBOARDED, '1'); } catch {}
   };
 
   const result = useMemo(() => compute(inputs), [inputs]);
@@ -84,7 +101,21 @@ export default function App() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col">
-      <TopBar mode={mode} onModeChange={changeMode} lang={lang} onLangChange={setLang} t={t}>
+      {!onboarded && <OnboardingWizard onDone={finishOnboarding} />}
+      {baselineModalOpen && (
+        <BaselineModal initial={inputs} onSave={saveBaselineFromModal} onClose={() => setBaselineModalOpen(false)} />
+      )}
+      {helpOpen && <InstructionsDrawer onClose={() => setHelpOpen(false)} />}
+
+      <TopBar
+        mode={mode}
+        onModeChange={changeMode}
+        lang={lang}
+        onLangChange={setLang}
+        onHelp={() => setHelpOpen(true)}
+        t={t}
+        rightExtra={<ExportMenu inputs={inputs} targetSelector="#napkin-canvas" />}
+      >
         <NicheSelector mode={mode} value={inputs.niche} onChange={changeNiche} />
       </TopBar>
 
@@ -92,7 +123,7 @@ export default function App() {
         <Sidebar inputs={inputs} set={set} t={t} width={sidebarWidth} onWidthChange={updateSidebarWidth} />
 
         <main className="flex-1 bg-[var(--color-surface-0)] overflow-y-auto">
-          <div className="max-w-6xl mx-auto p-6 lg:p-10 space-y-6">
+          <div id="napkin-canvas" className="max-w-6xl mx-auto p-6 lg:p-10 space-y-6">
             <section>
               <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
                 Napkin Unit Economics
@@ -105,7 +136,7 @@ export default function App() {
             <BaselineBar
               current={result}
               baseline={baselineResult}
-              onSetBaseline={setBaseline}
+              onSetBaseline={() => setBaselineModalOpen(true)}
               onClearBaseline={clearBaseline}
             />
 
