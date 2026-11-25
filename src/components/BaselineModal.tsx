@@ -56,8 +56,8 @@ export function BaselineModal({ initial, onSave, onClose }: BaselineModalProps) 
           <div className="flex items-center gap-2">
             <Bookmark size={18} weight="duotone" className="text-[var(--color-accent-300)]" />
             <div>
-              <h2 className="font-semibold text-[15px] tracking-tight">Your actual situation</h2>
-              <p className="text-[11px] text-[var(--color-text-3)]">Lock these numbers, then play with sliders to see the delta.</p>
+              <h2 className="font-semibold text-[15px] tracking-tight">Your actual situation <span className="text-[11px] font-normal text-[var(--color-text-3)]">— optional</span></h2>
+              <p className="text-[11px] text-[var(--color-text-3)]">Fill only the numbers you know. For the rest we keep the niche defaults.</p>
             </div>
           </div>
           <button onClick={onClose} className="text-[var(--color-text-3)] hover:text-[var(--color-text)]" aria-label="close">
@@ -67,10 +67,10 @@ export function BaselineModal({ initial, onSave, onClose }: BaselineModalProps) 
 
         <div className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Monthly Churn" hint="% / month">
+            <Field label="Monthly Churn" hint="leave as-is to skip">
               <NumField value={churnM} onChange={setChurnM} step={1} min={0} max={100} suffix="%" />
             </Field>
-            <Field label="Yearly Renewal" hint="% / year">
+            <Field label="Yearly Renewal" hint="leave as-is to skip">
               <NumField value={renewal} onChange={setRenewal} step={1} min={0} max={100} suffix="%" />
             </Field>
             <Field label="Blended CPA" hint="actual average">
@@ -79,22 +79,22 @@ export function BaselineModal({ initial, onSave, onClose }: BaselineModalProps) 
             <Field label="Paywall Conv" hint="% of sessions">
               <NumField value={parseFloat(paywallConv as string) || 0} onChange={(v) => setPaywallConv(v.toString())} step={0.1} min={0} max={100} suffix="%" />
             </Field>
-            <Field label="Monthly spend" hint="actual $ you spend/mo">
+            <Field label="Monthly spend" hint="actual $ / month">
               <NumField value={monthlySpend} onChange={setMonthlySpend} step={500} min={0} prefix="$" />
             </Field>
-            <Field label="ARPPU (optional)" hint="auto if left 0">
+            <Field label="ARPPU" hint="leave 0 to auto-derive">
               <NumField value={typeof arppu === 'number' ? arppu : 0} onChange={setArppu} step={1} min={0} prefix="$" />
             </Field>
           </div>
 
           <div className="pt-1 text-[11px] text-[var(--color-text-3)] leading-snug">
-            Everything else (plans, upsells, store fees, traffic mix) keeps the values from the current state. You can refine them after saving.
+            Not sure? Just hit <b>Skip</b> — you can always save a baseline later from the Health Score bar.
           </div>
         </div>
 
-        <div className="p-4 bg-[var(--color-surface-2)] border-t border-[var(--color-border-subtle)] flex items-center justify-end gap-2">
+        <div className="p-4 bg-[var(--color-surface-2)] border-t border-[var(--color-border-subtle)] flex items-center justify-between gap-2">
           <button onClick={onClose} className="px-4 py-2 text-[12px] text-[var(--color-text-2)] hover:text-[var(--color-text)]">
-            Cancel
+            Skip
           </button>
           <button
             onClick={handleSave}

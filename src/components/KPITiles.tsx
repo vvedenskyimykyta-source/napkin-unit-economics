@@ -70,10 +70,10 @@ function Tile({ label, value, sub, status, delta }: TileProps) {
     : 'var(--color-text-3)';
 
   return (
-    <div className="relative rounded-[var(--radius-md)] bg-[var(--color-surface-1)] border border-[var(--color-border-subtle)] p-4 overflow-hidden">
+    <div className="relative tile-lift rounded-[var(--radius-md)] bg-[var(--color-surface-1)] border border-[var(--color-border-subtle)] p-4 overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
       <div
-        className="absolute top-0 left-0 right-0 h-px"
-        style={{ background: statusColor ?? 'var(--color-border)' }}
+        className="absolute top-0 left-0 right-0 h-0.5"
+        style={{ background: statusColor ? `linear-gradient(90deg, ${statusColor}, transparent 100%)` : 'linear-gradient(90deg, var(--color-accent-500), transparent 70%)' }}
       />
       <div className="text-[10px] font-semibold tracking-wider uppercase text-[var(--color-text-3)] mb-1.5">
         {label}

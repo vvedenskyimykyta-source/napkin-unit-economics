@@ -1,8 +1,10 @@
-import { DeviceMobile, Browsers, Info, Question } from '@phosphor-icons/react';
+import { DeviceMobile, Browsers, Info, Question, Sun, Moon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import type { Mode } from '../engine/types';
 import type { I18N, Lang } from '../i18n/strings';
 import { clsx } from 'clsx';
+
+type Theme = 'dark' | 'light';
 
 interface TopBarProps {
   mode: Mode;
@@ -10,12 +12,14 @@ interface TopBarProps {
   lang: Lang;
   onLangChange: (l: Lang) => void;
   onHelp: () => void;
+  theme: Theme;
+  onThemeChange: (t: Theme) => void;
   t: I18N;
   rightExtra?: React.ReactNode;
   children?: React.ReactNode;
 }
 
-export function TopBar({ mode, onModeChange, lang, onLangChange, onHelp, t, rightExtra, children }: TopBarProps) {
+export function TopBar({ mode, onModeChange, lang, onLangChange, onHelp, theme, onThemeChange, t, rightExtra, children }: TopBarProps) {
   return (
     <header className="border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-0)]/80 backdrop-blur-md sticky top-0 z-40">
       <div className="h-16 px-5 lg:px-8 flex items-center justify-between gap-4">
@@ -30,9 +34,17 @@ export function TopBar({ mode, onModeChange, lang, onLangChange, onHelp, t, righ
           <ModeToggle mode={mode} onChange={onModeChange} t={t} />
         </div>
 
-        {/* Right: lang + extras + help */}
+        {/* Right: lang + theme + extras + help */}
         <div className="flex items-center gap-2">
           <LangToggle lang={lang} onChange={onLangChange} />
+          <button
+            onClick={() => onThemeChange(theme === 'dark' ? 'light' : 'dark')}
+            className="w-8 h-8 grid place-items-center rounded-full bg-[var(--color-surface-1)] border border-[var(--color-border-subtle)] text-[var(--color-text-3)] hover:text-[var(--color-text)] hover:border-[var(--color-border)]"
+            title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+            aria-label="toggle theme"
+          >
+            {theme === 'dark' ? <Sun size={14} weight="duotone" /> : <Moon size={14} weight="duotone" />}
+          </button>
           <button
             onClick={onHelp}
             className="w-8 h-8 grid place-items-center rounded-full bg-[var(--color-surface-1)] border border-[var(--color-border-subtle)] text-[var(--color-text-3)] hover:text-[var(--color-text)] hover:border-[var(--color-border)]"

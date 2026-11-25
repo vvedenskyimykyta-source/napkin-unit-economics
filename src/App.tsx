@@ -25,6 +25,9 @@ import { ExportMenu } from './components/ExportMenu';
 const LS_BASELINE = 'napkin.baseline.v1';
 const LS_SIDEBAR_WIDTH = 'napkin.sidebarWidth.v1';
 const LS_ONBOARDED = 'napkin.onboarded.v1';
+const LS_THEME = 'napkin.theme.v1';
+
+type Theme = 'dark' | 'light';
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('mobile');
@@ -51,6 +54,17 @@ export default function App() {
   const [onboarded, setOnboarded] = useState<boolean>(() => {
     try { return localStorage.getItem(LS_ONBOARDED) === '1'; } catch { return false; }
   });
+  const [theme, setThemeState] = useState<Theme>(() => {
+    try { return (localStorage.getItem(LS_THEME) as Theme) || 'dark'; } catch { return 'dark'; }
+  });
+  const setTheme = (t: Theme) => {
+    setThemeState(t);
+    try { localStorage.setItem(LS_THEME, t); } catch {}
+    document.documentElement.setAttribute('data-theme', t);
+  };
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
   const [baselineModalOpen, setBaselineModalOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -113,6 +127,8 @@ export default function App() {
         lang={lang}
         onLangChange={setLang}
         onHelp={() => setHelpOpen(true)}
+        theme={theme}
+        onThemeChange={setTheme}
         t={t}
         rightExtra={<ExportMenu inputs={inputs} targetSelector="#napkin-canvas" />}
       >
