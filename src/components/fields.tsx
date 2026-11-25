@@ -20,9 +20,14 @@ interface NumFieldProps {
   max?: number;
   step?: number;
   prefix?: string;
+  suffix?: string;
 }
 
-export function NumField({ value, onChange, min, max, step = 1, prefix }: NumFieldProps) {
+export function NumField({ value, onChange, min, max, step = 1, prefix, suffix }: NumFieldProps) {
+  // v2.1 fix: select-all on focus so typing immediately replaces the existing
+  // value (fixes the "leading zero makes decimals hard" bug).
+  const onFocus = (e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.select();
+
   return (
     <div className="relative">
       {prefix && (
@@ -32,8 +37,10 @@ export function NumField({ value, onChange, min, max, step = 1, prefix }: NumFie
       )}
       <input
         type="number"
+        inputMode="decimal"
         value={Number.isFinite(value) ? value : 0}
         onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        onFocus={onFocus}
         min={min}
         max={max}
         step={step}
@@ -41,9 +48,15 @@ export function NumField({ value, onChange, min, max, step = 1, prefix }: NumFie
           'w-full bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-[var(--radius-sm)]',
           'px-2.5 py-1.5 text-[13px] mono font-medium',
           'focus:outline-none focus:border-[var(--color-accent-500)] focus:ring-2 focus:ring-[var(--color-accent-500)]/20',
-          prefix && 'pl-6'
+          prefix && 'pl-6',
+          suffix && 'pr-7'
         )}
       />
+      {suffix && (
+        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-[var(--color-text-3)] mono pointer-events-none">
+          {suffix}
+        </span>
+      )}
     </div>
   );
 }

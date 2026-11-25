@@ -29,6 +29,13 @@ export function Sidebar({ inputs, set, t }: SidebarProps) {
   const updatePlan = (id: string, patch: Partial<Plan>) => {
     set('plans', inputs.plans.map((p) => p.id === id ? { ...p, ...patch } : p));
   };
+  const updatePlanShare = (id: string, newShare: number) => {
+    // v2.1 fix #23: cap the moved share at 100 - sum of others
+    const others = inputs.plans.filter((p) => p.id !== id).reduce((s, p) => s + p.share, 0);
+    const maxAllowed = Math.max(0, 100 - others);
+    const clamped = Math.min(newShare, maxAllowed);
+    updatePlan(id, { share: clamped });
+  };
   const addPlan = () => {
     const newId = 'plan-' + Date.now();
     set('plans', [...inputs.plans, {
@@ -64,16 +71,24 @@ export function Sidebar({ inputs, set, t }: SidebarProps) {
           label={t.introPricing}
         />
         <div className="space-y-2">
-          {inputs.plans.map((p) => (
-            <PlanRow
-              key={p.id}
-              plan={p}
-              showIntro={inputs.introPricing}
-              onChange={(patch) => updatePlan(p.id, patch)}
-              onRemove={() => removePlan(p.id)}
-              canRemove={inputs.plans.length > 1}
-            />
-          ))}
+          {inputs.plans.map((p) => {
+            const otherShares = inputs.plans
+              .filter((x) => x.id !== p.id)
+              .reduce((s, x) => s + x.share, 0);
+            const maxShare = Math.max(0, 100 - otherShares);
+            return (
+              <PlanRow
+                key={p.id}
+                plan={p}
+                showIntro={inputs.introPricing}
+                onChange={(patch) => updatePlan(p.id, patch)}
+                onShareChange={(v) => updatePlanShare(p.id, v)}
+                maxShare={maxShare}
+                onRemove={() => removePlan(p.id)}
+                canRemove={inputs.plans.length > 1}
+              />
+            );
+          })}
           <button
             type="button"
             onClick={addPlan}
@@ -121,9 +136,19 @@ export function Sidebar({ inputs, set, t }: SidebarProps) {
         <Field label={t.cogs}>
           <NumField value={inputs.cogs} onChange={(v) => set('cogs', v)} step={0.1} prefix="$" min={0} />
         </Field>
-        <Field label="Fixed costs / month, $" hint="salaries, infra, rent">
-          <NumField value={inputs.fixedCostsMonthly} onChange={(v) => set('fixedCostsMonthly', v)} step={500} prefix="$" min={0} />
-        </Field>
+        {/* v2.1 fix #15: Fixed costs are optional — toggle in, exclude if off */}
+        <div className="space-y-2">
+          <Switch
+            checked={inputs.fixedCostsMonthly > 0}
+            onChange={(v) => set('fixedCostsMonthly', v ? (inputs.fixedCostsMonthly || 5000) : 0)}
+            label="Add fixed costs (salaries, infra, rent)"
+          />
+          {inputs.fixedCostsMonthly > 0 && (
+            <Field label="Fixed costs / month, $">
+              <NumField value={inputs.fixedCostsMonthly} onChange={(v) => set('fixedCostsMonthly', v)} step={500} prefix="$" min={0} />
+            </Field>
+          )}
+        </div>
       </Panel>
 
       <Panel title={t.pTraffic} icon={<Target {...ICON} />}>
@@ -179,12 +204,17 @@ interface PlanRowProps {
   plan: Plan;
   showIntro: boolean;
   onChange: (patch: Partial<Plan>) => void;
+  onShareChange: (v: number) => void;
+  maxShare: number;
   onRemove: () => void;
   canRemove: boolean;
 }
 
-function PlanRow({ plan, showIntro, onChange, onRemove, canRemove }: PlanRowProps) {
+function PlanRow({ plan, showIntro, onChange, onShareChange, maxShare, onRemove, canRemove }: PlanRowProps) {
   const matched = matchPeriod(plan.periodMonths);
+  // v2.1 fix #24: show period as badge next to the label
+  const periodLabel = matched?.label ?? `${plan.periodMonths.toFixed(2)} mo`;
+
   return (
     <div className="rounded-[var(--radius-sm)] bg-[var(--color-surface-1)] border border-[var(--color-border-subtle)] p-2.5 space-y-2">
       <div className="flex items-center gap-2">
@@ -194,6 +224,9 @@ function PlanRow({ plan, showIntro, onChange, onRemove, canRemove }: PlanRowProp
           onChange={(e) => onChange({ label: e.target.value })}
           className="flex-1 bg-transparent text-[12px] font-medium focus:outline-none"
         />
+        <span className="text-[9px] font-semibold tracking-wider uppercase text-[var(--color-accent-300)] bg-[var(--color-accent-500)]/10 border border-[var(--color-accent-500)]/20 rounded-full px-2 py-0.5">
+          {periodLabel}
+        </span>
         {canRemove && (
           <button
             type="button"
@@ -210,15 +243,34 @@ function PlanRow({ plan, showIntro, onChange, onRemove, canRemove }: PlanRowProp
         <Select
           value={matched?.id ?? 'custom'}
           onChange={(id) => {
-            const preset = PERIODS.find((p) => p.id === id);
-            if (preset) onChange({ periodMonths: preset.periodMonths });
+            if (id === 'custom') {
+              // v2.1 fix #13: entering custom mode. Default to current if already custom,
+              // else nudge off the matched preset to signal manual control.
+              if (matched) onChange({ periodMonths: matched.periodMonths + 0.001 });
+            } else {
+              const preset = PERIODS.find((p) => p.id === id);
+              if (preset) onChange({ periodMonths: preset.periodMonths });
+            }
           }}
           options={[
             ...PERIODS.map((p) => ({ value: p.id, label: p.label })),
-            { value: 'custom', label: `Custom (${plan.periodMonths.toFixed(2)} mo)` }
+            { value: 'custom', label: 'Custom period…' }
           ]}
         />
       </Field>
+
+      {/* v2.1 fix #13: direct editor for custom periods */}
+      {!matched && (
+        <Field label="Custom period (months)" hint="0.1 ≈ 3 days, 1 = monthly, 24 = 2 yrs">
+          <NumField
+            value={plan.periodMonths}
+            onChange={(v) => onChange({ periodMonths: Math.max(0.01, v) })}
+            step={0.1}
+            min={0.01}
+            suffix="mo"
+          />
+        </Field>
+      )}
 
       <div className={showIntro ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-1'}>
         {showIntro && (
@@ -231,8 +283,15 @@ function PlanRow({ plan, showIntro, onChange, onRemove, canRemove }: PlanRowProp
         </Field>
       </div>
 
-      <Field label="Share %">
-        <Slider value={plan.share} onChange={(v) => onChange({ share: v })} />
+      <Field
+        label="Share %"
+        hint={maxShare < 100 ? `max ${maxShare.toFixed(0)}% (others take rest)` : undefined}
+      >
+        <Slider
+          value={plan.share}
+          onChange={onShareChange}
+          max={Math.max(1, maxShare || 1)}
+        />
       </Field>
     </div>
   );
@@ -320,11 +379,17 @@ function UpsellList({ label, cfg, onChange, addLabel }: UpsellListProps) {
         <div>{label}</div>
         <Switch checked={cfg.enabled} onChange={(v) => onChange({ enabled: v })} />
       </div>
+      {/* v2.1 fix #17: rename Conv → Take rate and add % suffix */}
+      <div className="grid grid-cols-[1fr_1fr_24px] gap-1.5 text-[10px] uppercase tracking-wider font-semibold text-[var(--color-text-3)] px-0.5">
+        <span>Price</span>
+        <span>Take rate</span>
+        <span />
+      </div>
       <div className={cfg.enabled ? 'space-y-1.5' : 'opacity-40 pointer-events-none space-y-1.5'}>
         {cfg.items.map((it, i) => (
           <div key={i} className="grid grid-cols-[1fr_1fr_24px] gap-1.5 items-center">
             <NumField value={it.price} onChange={(v) => upd(i, 'price', v)} step={0.5} prefix="$" />
-            <NumField value={it.conv} onChange={(v) => upd(i, 'conv', v)} step={0.5} />
+            <NumField value={it.conv} onChange={(v) => upd(i, 'conv', v)} step={0.5} suffix="%" />
             <button
               type="button"
               onClick={() => del(i)}
