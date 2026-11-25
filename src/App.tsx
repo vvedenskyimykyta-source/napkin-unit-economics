@@ -15,6 +15,7 @@ import { LtvCurve } from './components/charts/LtvCurve';
 import { CohortArea } from './components/charts/CohortArea';
 import { SensHeatmap } from './components/charts/SensHeatmap';
 import { PnlBars } from './components/charts/PnlBars';
+import { Waterfall } from './components/charts/Waterfall';
 import { BaselineBar } from './components/BaselineBar';
 
 const LS_BASELINE = 'napkin.baseline.v1';
@@ -112,9 +113,14 @@ export default function App() {
 
             <Targets result={result} t={t} />
 
-            <ChartCard title={t.sPnL} sub={t.sPnLSub}>
-              <PnlBars result={result} />
-            </ChartCard>
+            <div className="grid lg:grid-cols-2 gap-4">
+              <ChartCard title={t.sPnL} sub={t.sPnLSub}>
+                <PnlBars result={result} />
+              </ChartCard>
+              <ChartCard title="Monthly waterfall" sub="gross revenue → net profit">
+                <Waterfall result={result} />
+              </ChartCard>
+            </div>
 
             <ChartCard title={t.sSens} sub={t.sSensSub}>
               <SensHeatmap result={result} />

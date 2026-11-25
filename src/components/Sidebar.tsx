@@ -118,6 +118,9 @@ export function Sidebar({ inputs, set, t }: SidebarProps) {
         <Field label={t.cogs}>
           <NumField value={inputs.cogs} onChange={(v) => set('cogs', v)} step={0.1} prefix="$" min={0} />
         </Field>
+        <Field label="Fixed costs / month, $" hint="salaries, infra, rent">
+          <NumField value={inputs.fixedCostsMonthly} onChange={(v) => set('fixedCostsMonthly', v)} step={500} prefix="$" min={0} />
+        </Field>
       </Panel>
 
       <Panel title={t.pTraffic} icon={<Target {...ICON} />}>

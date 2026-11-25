@@ -45,6 +45,7 @@ export interface Inputs {
   storeFee: number;    // 0-100 (effective fee, driven by processor unless 'custom')
   refundRate: number;  // 0-100
   cogs: number;        // $/user/month
+  fixedCostsMonthly: number;  // $, monthly baseline cost (salaries, infra)
 
   channels: {
     web: boolean;
@@ -140,6 +141,15 @@ export interface ComputeResult {
   profitMonthPB: number;
   revTotalPB: number;
   profitTotalPB: number;
+
+  // Waterfall components (monthly, D0 view)
+  waterfallGross: number;
+  waterfallStoreFeeCut: number;
+  waterfallRefundCut: number;
+  waterfallCogsCut: number;
+  waterfallFixedCut: number;
+  waterfallAdSpend: number;
+  waterfallNetProfit: number;
 
   // Echo of inputs needed by renderers
   inputs: Inputs;

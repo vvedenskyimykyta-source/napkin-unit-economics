@@ -262,15 +262,27 @@ export function compute(raw: Inputs): ComputeResult {
   const budgetSufficient = totalBudget >= cashRequired;
 
   // P&L
+  const fixedMonthly = Math.max(0, inputs.fixedCostsMonthly);
   const revMonthD0 = purchPerMonth * arppuWithD0;
-  const profitMonthD0 = revMonthD0 - spendPerMonth;
+  const profitMonthD0 = revMonthD0 - spendPerMonth - fixedMonthly;
   const revTotalD0 = totalPurchases * arppuWithD0;
-  const profitTotalD0 = revTotalD0 - totalBudget;
+  const profitTotalD0 = revTotalD0 - totalBudget - fixedMonthly * monthsOfBudget;
   const ltvPB = paybackMonth !== null ? totalLTV(paybackMonth) : ltv6;
   const revMonthPB = purchPerMonth * ltvPB;
-  const profitMonthPB = revMonthPB - spendPerMonth;
+  const profitMonthPB = revMonthPB - spendPerMonth - fixedMonthly;
   const revTotalPB = totalPurchases * ltvPB;
-  const profitTotalPB = revTotalPB - totalBudget;
+  const profitTotalPB = revTotalPB - totalBudget - fixedMonthly * monthsOfBudget;
+
+  // Waterfall (monthly, D0 view): gross → store fee → refund → COGS → fixed → spend → net
+  const waterfallGross = purchPerMonth * arppuGrossD0;
+  const waterfallStoreFeeCut = waterfallGross * storeFee;
+  const afterStore = waterfallGross - waterfallStoreFeeCut;
+  const waterfallRefundCut = afterStore * refundRate;
+  const afterRefund = afterStore - waterfallRefundCut;
+  const waterfallCogsCut = purchPerMonth * cogs;  // D0 month: 1 month of COGS per new user
+  const waterfallFixedCut = fixedMonthly;
+  const waterfallAdSpend = spendPerMonth;
+  const waterfallNetProfit = afterRefund - waterfallCogsCut - waterfallFixedCut - waterfallAdSpend;
 
   // Sensitivity helper
   function sensPaybackAt(cpaDeltaPct: number, churnDeltaPct: number): number | null {
@@ -349,6 +361,14 @@ export function compute(raw: Inputs): ComputeResult {
 
     revMonthD0, profitMonthD0, revTotalD0, profitTotalD0,
     revMonthPB, profitMonthPB, revTotalPB, profitTotalPB,
+
+    waterfallGross,
+    waterfallStoreFeeCut,
+    waterfallRefundCut,
+    waterfallCogsCut,
+    waterfallFixedCut,
+    waterfallAdSpend,
+    waterfallNetProfit,
 
     inputs,
 
