@@ -6,7 +6,7 @@
 
 Prototype pricing, CPA, churn, LTV, Payback, cohort break-even and sensitivity — in one page, under 2 minutes, no account needed.
 
-[**Live → calc.nickvedensky.com**](https://calc.nickvedensky.com)
+[**Live → calc.nickvvedenskyi.com**](https://calc.nickvvedenskyi.com)
 
 </div>
 
@@ -118,6 +118,6 @@ MIT — do whatever, just don't claim you wrote it. See [LICENSE](LICENSE).
 
 ## Credits
 
-Built by [Nick Vedensky](https://nickvedensky.com) — growth lead working with mobile and SaaS founders on monetization, pricing and unit economics.
+Built by [Nick Vedensky](https://nickvvedenskyi.com) — growth lead working with mobile and SaaS founders on monetization, pricing and unit economics.
 
 If this saved you an afternoon, star the repo and pass it on.
