@@ -31,6 +31,30 @@ export function compute(raw: Inputs): ComputeResult {
     .filter((p) => p.periodMonths >= 12)
     .reduce((s, p) => s + planShare(p), 0);
 
+  // Blended per-month retention curve — fraction of a cohort still active
+  // at the given age in months. Plan-weighted so weekly + monthly + yearly
+  // contribute correctly.
+  function cohortActive(ageMonths: number): number {
+    if (ageMonths <= 0) return 1;
+    let active = 0;
+    for (const p of plans) {
+      const w = planShare(p);
+      const Pm = p.periodMonths;
+      let r: number;
+      if (Pm >= 12) {
+        // yearly-ish: use renewal per year
+        r = Math.pow(inputs.renewal / 100, ageMonths / 12);
+      } else if (Pm >= 1) {
+        r = Math.pow(1 - inputs.churnM / 100, ageMonths);
+      } else {
+        const weeks = ageMonths * (30.44 / 7);
+        r = Math.pow(1 - inputs.churnW / 100, weeks);
+      }
+      active += w * Math.max(0, Math.min(1, r));
+    }
+    return active;
+  }
+
   // Retention per period for a given plan
   const retentionPerPeriod = (p: Plan): number => {
     const Pm = p.periodMonths;
@@ -397,9 +421,11 @@ export function compute(raw: Inputs): ComputeResult {
     waterfallAdSpend,
     waterfallNetProfit,
 
+    purchPerMonthByCohort: Array.from({ length: Math.round(testLen) }, () => purchPerMonth),
+
     inputs,
 
-    grossLTV, netLTV, upsellLTV, totalLTV, sensPaybackAt
+    grossLTV, netLTV, upsellLTV, totalLTV, sensPaybackAt, cohortActive
   };
 }
 

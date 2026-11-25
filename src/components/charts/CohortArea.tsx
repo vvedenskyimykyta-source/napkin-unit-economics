@@ -32,7 +32,7 @@ export function CohortArea({ result, width = 760, height = 220 }: { result: Comp
     return pts;
   }, [result]);
 
-  const M = { top: 20, right: 24, bottom: 28, left: 64 };
+  const M = { top: 20, right: 30, bottom: 36, left: 76 };
   const W = width - M.left - M.right;
   const H = height - M.top - M.bottom;
 
@@ -65,13 +65,13 @@ export function CohortArea({ result, width = 760, height = 220 }: { result: Comp
         {yScale.ticks(4).map((v, i) => (
           <g key={i} transform={`translate(0,${yScale(v)})`}>
             <line x1={0} x2={W} stroke="var(--color-border-subtle)" strokeDasharray="2 3" />
-            <text x={-8} y={4} textAnchor="end" fontSize={10} className="fill-[var(--color-text-3)] mono">
+            <text x={-10} y={5} textAnchor="end" fontSize={12} className="fill-[var(--color-text-3)] mono">
               {fmtK(v)}
             </text>
           </g>
         ))}
         {[0, 6, 12, 18, 24].map((v, i) => (
-          <text key={i} x={xScale(v)} y={H + 18} textAnchor="middle" fontSize={10} className="fill-[var(--color-text-3)] mono">
+          <text key={i} x={xScale(v)} y={H + 22} textAnchor="middle" fontSize={12} className="fill-[var(--color-text-3)] mono">
             M{v}
           </text>
         ))}

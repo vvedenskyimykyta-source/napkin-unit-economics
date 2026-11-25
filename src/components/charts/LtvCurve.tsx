@@ -23,7 +23,7 @@ export function LtvCurve({ result, width = 760, height = 240 }: Props) {
     return pts;
   }, [r]);
 
-  const M = { top: 20, right: 24, bottom: 28, left: 56 };
+  const M = { top: 20, right: 30, bottom: 36, left: 70 };
   const W = width - M.left - M.right;
   const H = height - M.top - M.bottom;
 
@@ -67,22 +67,22 @@ export function LtvCurve({ result, width = 760, height = 240 }: Props) {
         {yScale.ticks(4).map((v, i) => (
           <g key={i} transform={`translate(0,${yScale(v)})`}>
             <line x1={0} x2={W} stroke="var(--color-border-subtle)" strokeDasharray="2 3" />
-            <text x={-8} y={4} textAnchor="end" className="fill-[var(--color-text-3)] mono" fontSize={10}>
+            <text x={-10} y={5} textAnchor="end" className="fill-[var(--color-text-3)] mono" fontSize={12}>
               {fmt(v, 0)}
             </text>
           </g>
         ))}
         {/* X ticks */}
         {xScale.ticks(13).map((v, i) => (
-          <text key={i} x={xScale(v)} y={H + 18} textAnchor="middle" className="fill-[var(--color-text-3)] mono" fontSize={10}>
+          <text key={i} x={xScale(v)} y={H + 22} textAnchor="middle" className="fill-[var(--color-text-3)] mono" fontSize={12}>
             {v === 0 ? 'D0' : 'M' + v}
           </text>
         ))}
 
         {/* eCPA threshold */}
         <line x1={0} x2={W} y1={yScale(r.eCPA)} y2={yScale(r.eCPA)}
-          stroke="var(--color-warn)" strokeDasharray="3 3" strokeWidth={1} />
-        <text x={W - 6} y={yScale(r.eCPA) - 6} textAnchor="end" fontSize={10}
+          stroke="var(--color-warn)" strokeDasharray="3 3" strokeWidth={1.5} />
+        <text x={W - 8} y={yScale(r.eCPA) - 8} textAnchor="end" fontSize={12}
           className="fill-[var(--color-warn)] mono" fontWeight={600}>
           eCPA {fmt(r.eCPA, 0)}
         </text>

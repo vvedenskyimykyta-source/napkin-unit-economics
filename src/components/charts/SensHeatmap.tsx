@@ -26,22 +26,22 @@ function colorFor(pb: number | null): string {
 export function SensHeatmap({ result }: { result: ComputeResult }) {
   return (
     <div className="space-y-2">
-      <div className="text-[11px] mono text-[var(--color-text-3)] mb-2">
+      <div className="text-[12px] mono text-[var(--color-text-3)] mb-3">
         CPA × Churn → Payback (M)
       </div>
       <div
-        className="grid gap-[2px] text-[10px] mono tabular"
-        style={{ gridTemplateColumns: `60px repeat(${CHURN_STEPS.length}, 1fr)` }}
+        className="grid gap-[3px] text-[12px] mono tabular"
+        style={{ gridTemplateColumns: `80px repeat(${CHURN_STEPS.length}, 1fr)` }}
       >
         <div />
         {CHURN_STEPS.map((c) => (
-          <div key={c} className="text-center text-[var(--color-text-3)] font-semibold py-1">
+          <div key={c} className="text-center text-[var(--color-text-3)] font-semibold py-1.5 text-[11px]">
             {c >= 0 ? '+' : ''}{c}%
           </div>
         ))}
         {CPA_STEPS.map((cpa) => (
           <div key={cpa} className="contents">
-            <div className="text-right pr-2 text-[var(--color-text-3)] font-semibold flex items-center justify-end">
+            <div className="text-right pr-2 text-[var(--color-text-3)] font-semibold flex items-center justify-end text-[11px]">
               CPA {cpa >= 0 ? '+' : ''}{cpa}%
             </div>
             {CHURN_STEPS.map((ch) => {
@@ -51,7 +51,7 @@ export function SensHeatmap({ result }: { result: ComputeResult }) {
               return (
                 <div
                   key={ch}
-                  className={`text-center py-1.5 rounded-sm font-medium ${isCurrent ? 'ring-2 ring-[var(--color-text)]' : ''}`}
+                  className={`text-center py-2 rounded-md font-semibold ${isCurrent ? 'ring-2 ring-[var(--color-text)]' : ''}`}
                   style={{
                     background: bg,
                     color: pb === null || pb > 10 ? 'var(--color-text-2)' : 'var(--color-surface-0)'

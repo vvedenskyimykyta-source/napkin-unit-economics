@@ -19,7 +19,7 @@ export function Waterfall({ result, width = 760, height = 260 }: { result: Compu
     { label: 'Net Profit',   value:  r.waterfallNetProfit,      kind: 'net' }
   ];
 
-  const M = { top: 16, right: 24, bottom: 48, left: 24 };
+  const M = { top: 24, right: 30, bottom: 54, left: 30 };
   const W = width - M.left - M.right;
   const H = height - M.top - M.bottom;
 
@@ -72,9 +72,9 @@ export function Waterfall({ result, width = 760, height = 260 }: { result: Compu
               />
               <text
                 x={cx}
-                y={top - 6}
+                y={top - 8}
                 textAnchor="middle"
-                fontSize={10}
+                fontSize={12}
                 className="fill-[var(--color-text)] mono"
                 fontWeight={600}
               >
@@ -82,10 +82,11 @@ export function Waterfall({ result, width = 760, height = 260 }: { result: Compu
               </text>
               <text
                 x={cx}
-                y={H + 16}
+                y={H + 22}
                 textAnchor="middle"
-                fontSize={10}
-                className="fill-[var(--color-text-3)]"
+                fontSize={12}
+                className="fill-[var(--color-text-2)]"
+                fontWeight={500}
               >
                 {b.label}
               </text>

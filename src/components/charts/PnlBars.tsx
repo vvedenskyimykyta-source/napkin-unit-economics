@@ -14,7 +14,7 @@ export function PnlBars({ result, width = 760, height = 240 }: { result: Compute
     { label: 'Profit @PB', month: r.profitMonthPB, total: r.profitTotalPB }
   ];
 
-  const M = { top: 10, right: 100, bottom: 28, left: 86 };
+  const M = { top: 10, right: 120, bottom: 32, left: 100 };
   const W = width - M.left - M.right;
   const H = height - M.top - M.bottom;
 
@@ -37,7 +37,7 @@ export function PnlBars({ result, width = 760, height = 240 }: { result: Compute
 
           return (
             <g key={d.label} transform={`translate(0,${bandY})`}>
-              <text x={-10} y={yScale.bandwidth() / 2} dy="0.35em" textAnchor="end" fontSize={11}
+              <text x={-12} y={yScale.bandwidth() / 2} dy="0.35em" textAnchor="end" fontSize={13} fontWeight={500}
                 className="fill-[var(--color-text-2)]">{d.label}</text>
 
               {/* month bar */}
@@ -47,11 +47,11 @@ export function PnlBars({ result, width = 760, height = 240 }: { result: Compute
                 width={Math.abs(xScale(d.month) - xScale(0))}
                 height={barHMonth}
                 fill={colMonth}
-                rx={2}
+                rx={3}
               />
-              <text x={xScale(d.month) + (d.month >= 0 ? 6 : -6)} y={barHMonth / 2} dy="0.35em" fontSize={10}
+              <text x={xScale(d.month) + (d.month >= 0 ? 8 : -8)} y={barHMonth / 2} dy="0.35em" fontSize={12}
                 textAnchor={d.month >= 0 ? 'start' : 'end'}
-                className="fill-[var(--color-text-2)] mono">
+                className="fill-[var(--color-text-2)] mono" fontWeight={600}>
                 {(d.month >= 0 ? '+' : '') + fmtK(d.month)}/mo
               </text>
 
@@ -63,9 +63,9 @@ export function PnlBars({ result, width = 760, height = 240 }: { result: Compute
                 height={barHTotal}
                 fill={colTotal}
                 opacity={0.8}
-                rx={2}
+                rx={3}
               />
-              <text x={xScale(d.total) + (d.total >= 0 ? 6 : -6)} y={yScale.bandwidth() - barHTotal / 2} dy="0.35em" fontSize={10}
+              <text x={xScale(d.total) + (d.total >= 0 ? 8 : -8)} y={yScale.bandwidth() - barHTotal / 2} dy="0.35em" fontSize={12}
                 textAnchor={d.total >= 0 ? 'start' : 'end'}
                 className="fill-[var(--color-text-3)] mono">
                 {(d.total >= 0 ? '+' : '') + fmtK(d.total)}/total
@@ -75,7 +75,7 @@ export function PnlBars({ result, width = 760, height = 240 }: { result: Compute
         })}
 
         {/* X axis bottom tick: scale label */}
-        <text x={W} y={H + 18} textAnchor="end" fontSize={10} className="fill-[var(--color-text-3)] mono">
+        <text x={W} y={H + 22} textAnchor="end" fontSize={11} className="fill-[var(--color-text-3)] mono">
           scale: {fmtK(max)}
         </text>
       </g>

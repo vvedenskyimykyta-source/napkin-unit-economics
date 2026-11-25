@@ -16,6 +16,7 @@ import { CohortArea } from './components/charts/CohortArea';
 import { SensHeatmap } from './components/charts/SensHeatmap';
 import { PnlBars } from './components/charts/PnlBars';
 import { Waterfall } from './components/charts/Waterfall';
+import { CohortStack } from './components/charts/CohortStack';
 import { BaselineBar } from './components/BaselineBar';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { BaselineModal } from './components/BaselineModal';
@@ -160,25 +161,27 @@ export default function App() {
             <Diagnostics result={result} />
             <Forecast result={result} t={t} />
 
-            <div className="grid lg:grid-cols-2 gap-4">
-              <ChartCard title={t.sLTV} sub={t.sLTVSub}>
-                <LtvCurve result={result} />
-              </ChartCard>
-              <ChartCard title={t.sBE} sub={t.sBESub}>
-                <CohortArea result={result} />
-              </ChartCard>
-            </div>
+            <ChartCard title={t.sLTV} sub={t.sLTVSub}>
+              <LtvCurve result={result} width={1100} height={280} />
+            </ChartCard>
+
+            <ChartCard title="Cohort activity" sub="how each test-month's cohort stays active over time">
+              <CohortStack result={result} />
+            </ChartCard>
+
+            <ChartCard title={t.sBE} sub={t.sBESub}>
+              <CohortArea result={result} width={1100} height={280} />
+            </ChartCard>
 
             <Targets result={result} t={t} />
 
-            <div className="grid lg:grid-cols-2 gap-4">
-              <ChartCard title={t.sPnL} sub={t.sPnLSub}>
-                <PnlBars result={result} />
-              </ChartCard>
-              <ChartCard title="Monthly waterfall" sub="gross revenue → net profit">
-                <Waterfall result={result} />
-              </ChartCard>
-            </div>
+            <ChartCard title={t.sPnL} sub={t.sPnLSub}>
+              <PnlBars result={result} width={1100} height={280} />
+            </ChartCard>
+
+            <ChartCard title="Monthly waterfall" sub="gross revenue → net profit, step by step">
+              <Waterfall result={result} width={1100} height={300} />
+            </ChartCard>
 
             <ChartCard title={t.sSens} sub={t.sSensSub}>
               <SensHeatmap result={result} />

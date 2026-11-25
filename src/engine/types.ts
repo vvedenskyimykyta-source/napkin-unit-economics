@@ -72,8 +72,9 @@ export interface ComputeResult {
   mode: Mode;
   isSaas: boolean;
 
-  // Share of long (>=12mo) plans — used by diagnostics
+  // Plan share rollups used by diagnostics / UI
   shareY: number;
+  purchPerMonthByCohort: number[];  // size testLenMonths — new paying users per cohort month
 
   // Pricing metrics
   arppuGrossD0: number;
@@ -161,6 +162,7 @@ export interface ComputeResult {
   upsellLTV: (months: number) => number;
   totalLTV: (months: number) => number;
   sensPaybackAt: (cpaDeltaPct: number, churnDeltaPct: number) => number | null;
+  cohortActive: (ageMonths: number) => number;
 }
 
 export interface DiagnosticFinding {
