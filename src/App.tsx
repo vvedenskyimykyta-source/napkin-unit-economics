@@ -19,11 +19,22 @@ import { Waterfall } from './components/charts/Waterfall';
 import { BaselineBar } from './components/BaselineBar';
 
 const LS_BASELINE = 'napkin.baseline.v1';
+const LS_SIDEBAR_WIDTH = 'napkin.sidebarWidth.v1';
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('mobile');
   const [lang, setLang] = useState<Lang>('en');
   const [inputs, setInputs] = useState<Inputs>(() => getPreset('mobile'));
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    try {
+      const raw = localStorage.getItem(LS_SIDEBAR_WIDTH);
+      return raw ? parseInt(raw, 10) || 340 : 340;
+    } catch { return 340; }
+  });
+  const updateSidebarWidth = (w: number) => {
+    setSidebarWidth(w);
+    try { localStorage.setItem(LS_SIDEBAR_WIDTH, String(w)); } catch {}
+  };
   const [baselineInputs, setBaselineInputs] = useState<Inputs | null>(() => {
     try {
       const raw = localStorage.getItem(LS_BASELINE);
@@ -77,10 +88,10 @@ export default function App() {
         <NicheSelector mode={mode} value={inputs.niche} onChange={changeNiche} />
       </TopBar>
 
-      <div className="flex-1 grid lg:grid-cols-[340px_1fr] min-h-0">
-        <Sidebar inputs={inputs} set={set} t={t} />
+      <div className="flex-1 flex min-h-0">
+        <Sidebar inputs={inputs} set={set} t={t} width={sidebarWidth} onWidthChange={updateSidebarWidth} />
 
-        <main className="bg-[var(--color-surface-0)] overflow-y-auto">
+        <main className="flex-1 bg-[var(--color-surface-0)] overflow-y-auto">
           <div className="max-w-6xl mx-auto p-6 lg:p-10 space-y-6">
             <section>
               <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
@@ -125,6 +136,15 @@ export default function App() {
             <ChartCard title={t.sSens} sub={t.sSensSub}>
               <SensHeatmap result={result} />
             </ChartCard>
+
+            <footer className="pt-8 pb-4 border-t border-[var(--color-border-subtle)] flex items-center justify-between gap-3 text-[11px] text-[var(--color-text-3)]">
+              <span>
+                Built by <a href="https://www.linkedin.com/in/nickvvedenskyi/" target="_blank" rel="noopener" className="text-[var(--color-accent-300)] hover:text-[var(--color-accent-200)] font-medium">Nick Vedensky</a>. MIT.
+              </span>
+              <a href="https://github.com/vvedenskyimykyta-source/napkin-unit-economics" target="_blank" rel="noopener" className="hover:text-[var(--color-text-2)]">
+                GitHub
+              </a>
+            </footer>
           </div>
         </main>
       </div>

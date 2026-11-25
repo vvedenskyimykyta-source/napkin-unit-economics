@@ -154,6 +154,62 @@ export const NICHES: Niche[] = [
       paywallConv:  { low: 2,   mid: 4,   high: 8 }
     }
   },
+  {
+    id: 'social-mobile',
+    label: 'Mobile — Social & Community',
+    mode: 'mobile',
+    tagline: 'BeReal-style, friend-finder, voice chat',
+    bench: {
+      arppuYearly:  { low: 40,  mid: 70,  high: 110 },
+      arppuMonthly: { low: 6,   mid: 10,  high: 18 },
+      monthlyChurn: { low: 20,  mid: 35,  high: 50 },
+      yearlyRenewal:{ low: 30,  mid: 45,  high: 60 },
+      cpa:          { low: 10,  mid: 25,  high: 60 },
+      paywallConv:  { low: 2,   mid: 5,   high: 10 }
+    }
+  },
+  {
+    id: 'streaming',
+    label: 'Mobile — Streaming & Media',
+    mode: 'mobile',
+    tagline: 'Podcasts, music, audiobooks, VOD',
+    bench: {
+      arppuYearly:  { low: 60,  mid: 90,  high: 140 },
+      arppuMonthly: { low: 6,   mid: 10,  high: 17 },
+      monthlyChurn: { low: 5,   mid: 10,  high: 18 },
+      yearlyRenewal:{ low: 65,  mid: 75,  high: 85 },
+      cpa:          { low: 15,  mid: 30,  high: 70 },
+      paywallConv:  { low: 2,   mid: 4,   high: 9 }
+    }
+  },
+  {
+    id: 'kids',
+    label: 'Mobile — Kids & Family',
+    mode: 'mobile',
+    tagline: 'Educational games, drawing, parenting',
+    bench: {
+      arppuYearly:  { low: 40,  mid: 70,  high: 110 },
+      arppuMonthly: { low: 6,   mid: 10,  high: 16 },
+      monthlyChurn: { low: 10,  mid: 18,  high: 30 },
+      yearlyRenewal:{ low: 50,  mid: 62,  high: 75 },
+      cpa:          { low: 15,  mid: 35,  high: 80 },
+      paywallConv:  { low: 2,   mid: 5,   high: 10 }
+    }
+  },
+  {
+    id: 'sleep',
+    label: 'Mobile — Sleep & Relaxation',
+    mode: 'mobile',
+    tagline: 'Sleep sounds, nap timers, dream journals',
+    bench: {
+      arppuYearly:  { low: 40,  mid: 60,  high: 90 },
+      arppuMonthly: { low: 5,   mid: 9,   high: 14 },
+      monthlyChurn: { low: 15,  mid: 25,  high: 40 },
+      yearlyRenewal:{ low: 45,  mid: 58,  high: 72 },
+      cpa:          { low: 10,  mid: 20,  high: 45 },
+      paywallConv:  { low: 3,   mid: 7,   high: 12 }
+    }
+  },
 
   // --- WEB / SAAS ---
   {
@@ -259,6 +315,81 @@ export const NICHES: Niche[] = [
       cpa:          { low: 100, mid: 220, high: 550 },
       paywallConv:  { low: 1.5, mid: 3,   high: 6 },
       trialToPaid:  { low: 15,  mid: 25,  high: 40 }
+    }
+  },
+  {
+    id: 'communications',
+    label: 'SaaS — Communications',
+    mode: 'saas',
+    tagline: 'Slack-likes, Zoom alts, team chat',
+    bench: {
+      arppuYearly:  { low: 200, mid: 500, high: 1500 },
+      arppuMonthly: { low: 15,  mid: 40,  high: 120 },
+      monthlyChurn: { low: 2,   mid: 5,   high: 10 },
+      yearlyRenewal:{ low: 75,  mid: 85,  high: 92 },
+      cpa:          { low: 80,  mid: 180, high: 450 },
+      paywallConv:  { low: 1.5, mid: 3,   high: 6 },
+      trialToPaid:  { low: 15,  mid: 25,  high: 40 }
+    }
+  },
+  {
+    id: 'hr-saas',
+    label: 'SaaS — HR & People Ops',
+    mode: 'saas',
+    tagline: 'Deel, BambooHR, hiring tools',
+    bench: {
+      arppuYearly:  { low: 500, mid: 1200, high: 4000 },
+      arppuMonthly: { low: 50,  mid: 120,  high: 400 },
+      monthlyChurn: { low: 2,   mid: 4,    high: 8 },
+      yearlyRenewal:{ low: 82,  mid: 90,   high: 95 },
+      cpa:          { low: 150, mid: 400,  high: 1000 },
+      paywallConv:  { low: 1,   mid: 2.5,  high: 5 },
+      trialToPaid:  { low: 15,  mid: 25,   high: 40 }
+    }
+  },
+  {
+    id: 'security',
+    label: 'SaaS — Security',
+    mode: 'saas',
+    tagline: 'Password managers, SSO, VPNs',
+    bench: {
+      arppuYearly:  { low: 300, mid: 700, high: 2500 },
+      arppuMonthly: { low: 25,  mid: 60,  high: 200 },
+      monthlyChurn: { low: 2,   mid: 4,   high: 8 },
+      yearlyRenewal:{ low: 80,  mid: 88,  high: 95 },
+      cpa:          { low: 80,  mid: 200, high: 500 },
+      paywallConv:  { low: 1.5, mid: 3,   high: 6 },
+      trialToPaid:  { low: 18,  mid: 28,  high: 42 }
+    }
+  },
+  {
+    id: 'cx-saas',
+    label: 'SaaS — Customer Support',
+    mode: 'saas',
+    tagline: 'Intercom, Zendesk, help desks',
+    bench: {
+      arppuYearly:  { low: 400, mid: 900,  high: 3000 },
+      arppuMonthly: { low: 35,  mid: 80,   high: 250 },
+      monthlyChurn: { low: 3,   mid: 6,    high: 11 },
+      yearlyRenewal:{ low: 75,  mid: 85,   high: 92 },
+      cpa:          { low: 120, mid: 300,  high: 700 },
+      paywallConv:  { low: 1.5, mid: 3,    high: 5 },
+      trialToPaid:  { low: 15,  mid: 25,   high: 40 }
+    }
+  },
+  {
+    id: 'edtech-saas',
+    label: 'SaaS — EdTech & LMS',
+    mode: 'saas',
+    tagline: 'Online courses, LMS, teacher tools',
+    bench: {
+      arppuYearly:  { low: 150, mid: 400, high: 1200 },
+      arppuMonthly: { low: 15,  mid: 35,  high: 100 },
+      monthlyChurn: { low: 4,   mid: 8,   high: 15 },
+      yearlyRenewal:{ low: 65,  mid: 78,  high: 88 },
+      cpa:          { low: 50,  mid: 120, high: 300 },
+      paywallConv:  { low: 2,   mid: 4,   high: 8 },
+      trialToPaid:  { low: 12,  mid: 22,  high: 35 }
     }
   }
 ];

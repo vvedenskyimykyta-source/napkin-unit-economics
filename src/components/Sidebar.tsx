@@ -13,11 +13,15 @@ interface SidebarProps {
   inputs: Inputs;
   set: <K extends keyof Inputs>(k: K, v: Inputs[K]) => void;
   t: I18N;
+  width: number;
+  onWidthChange: (w: number) => void;
 }
 
 const ICON = { size: 15, weight: 'duotone' as const };
+const MIN_WIDTH = 280;
+const MAX_WIDTH = 480;
 
-export function Sidebar({ inputs, set, t }: SidebarProps) {
+export function Sidebar({ inputs, set, t, width, onWidthChange }: SidebarProps) {
   const isSaas = inputs.mode === 'saas';
   const niche = nicheById(inputs.niche);
   const b = niche?.bench;
@@ -53,8 +57,29 @@ export function Sidebar({ inputs, set, t }: SidebarProps) {
     if (id !== 'custom') set('storeFee', proc.fee);
   };
 
+  // v2.1: Resizable sidebar — drag the right edge
+  const onDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = width;
+    const move = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX;
+      const next = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startW + dx));
+      onWidthChange(next);
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
   return (
-    <aside className="hidden lg:flex flex-col border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-0)] overflow-y-auto">
+    <aside
+      className="hidden lg:flex flex-col border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-0)] overflow-y-auto relative"
+      style={{ width: `${width}px`, flexShrink: 0 }}
+    >
       <Panel title={t.pBudget} icon={<CurrencyDollar {...ICON} />}>
         <Field label={t.totalBudget}>
           <NumField value={inputs.totalBudget} onChange={(v) => set('totalBudget', v)} step={500} min={0} prefix="$" />
@@ -115,42 +140,7 @@ export function Sidebar({ inputs, set, t }: SidebarProps) {
         )}
       </Panel>
 
-      <Panel title={t.pCosts} icon={<Coins {...ICON} />}>
-        <Field label="Payment processor">
-          <Select
-            value={inputs.processor}
-            onChange={pickProcessor}
-            options={PROCESSORS.map((p) => ({ value: p.id, label: p.label, note: p.note }))}
-          />
-        </Field>
-        <Field label={`Effective fee (${inputs.processor === 'custom' ? 'manual' : 'auto'})`}>
-          <Slider
-            value={inputs.storeFee}
-            onChange={(v) => { set('storeFee', v); set('processor', 'custom'); }}
-            min={0} max={35}
-          />
-        </Field>
-        <Field label={t.refundRate}>
-          <Slider value={inputs.refundRate} onChange={(v) => set('refundRate', v)} min={0} max={20} />
-        </Field>
-        <Field label={t.cogs}>
-          <NumField value={inputs.cogs} onChange={(v) => set('cogs', v)} step={0.1} prefix="$" min={0} />
-        </Field>
-        {/* v2.1 fix #15: Fixed costs are optional — toggle in, exclude if off */}
-        <div className="space-y-2">
-          <Switch
-            checked={inputs.fixedCostsMonthly > 0}
-            onChange={(v) => set('fixedCostsMonthly', v ? (inputs.fixedCostsMonthly || 5000) : 0)}
-            label="Add fixed costs (salaries, infra, rent)"
-          />
-          {inputs.fixedCostsMonthly > 0 && (
-            <Field label="Fixed costs / month, $">
-              <NumField value={inputs.fixedCostsMonthly} onChange={(v) => set('fixedCostsMonthly', v)} step={500} prefix="$" min={0} />
-            </Field>
-          )}
-        </div>
-      </Panel>
-
+      {/* v2.1: Traffic moved up (before Costs) */}
       <Panel title={t.pTraffic} icon={<Target {...ICON} />}>
         <ChannelBlock
           name={t.web}
@@ -196,6 +186,51 @@ export function Sidebar({ inputs, set, t }: SidebarProps) {
           addLabel={t.addPack}
         />
       </Panel>
+
+      {/* v2.1: Costs moved down (last) */}
+      {/* drag handle placed last via absolute positioning below */}
+      <Panel title={t.pCosts} icon={<Coins {...ICON} />}>
+        <Field label="Payment processor">
+          <Select
+            value={inputs.processor}
+            onChange={pickProcessor}
+            options={PROCESSORS.map((p) => ({ value: p.id, label: p.label, note: p.note }))}
+          />
+        </Field>
+        <Field label={`Effective fee (${inputs.processor === 'custom' ? 'manual' : 'auto'})`}>
+          <Slider
+            value={inputs.storeFee}
+            onChange={(v) => { set('storeFee', v); set('processor', 'custom'); }}
+            min={0} max={35}
+          />
+        </Field>
+        <Field label={t.refundRate}>
+          <Slider value={inputs.refundRate} onChange={(v) => set('refundRate', v)} min={0} max={20} />
+        </Field>
+        <Field label={t.cogs}>
+          <NumField value={inputs.cogs} onChange={(v) => set('cogs', v)} step={0.1} prefix="$" min={0} />
+        </Field>
+        <div className="space-y-2">
+          <Switch
+            checked={inputs.fixedCostsMonthly > 0}
+            onChange={(v) => set('fixedCostsMonthly', v ? (inputs.fixedCostsMonthly || 5000) : 0)}
+            label="Add fixed costs (salaries, infra, rent)"
+          />
+          {inputs.fixedCostsMonthly > 0 && (
+            <Field label="Fixed costs / month, $">
+              <NumField value={inputs.fixedCostsMonthly} onChange={(v) => set('fixedCostsMonthly', v)} step={500} prefix="$" min={0} />
+            </Field>
+          )}
+        </div>
+      </Panel>
+
+      {/* Drag handle */}
+      <div
+        onMouseDown={onDragStart}
+        className="absolute top-0 right-0 bottom-0 w-1.5 cursor-col-resize hover:bg-[var(--color-accent-500)]/30 transition-colors"
+        title="Drag to resize"
+        aria-label="resize sidebar"
+      />
     </aside>
   );
 }

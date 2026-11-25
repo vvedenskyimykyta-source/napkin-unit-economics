@@ -1,4 +1,5 @@
-import { DeviceMobile, Browsers } from '@phosphor-icons/react';
+import { DeviceMobile, Browsers, Info } from '@phosphor-icons/react';
+import { useState } from 'react';
 import type { Mode } from '../engine/types';
 import type { I18N, Lang } from '../i18n/strings';
 import { clsx } from 'clsx';
@@ -14,53 +15,56 @@ interface TopBarProps {
 
 export function TopBar({ mode, onModeChange, lang, onLangChange, t, children }: TopBarProps) {
   return (
-    <header className="h-14 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-0)]/80 backdrop-blur-md sticky top-0 z-40">
-      <div className="h-full px-5 lg:px-8 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-md grid place-items-center bg-gradient-to-br from-[var(--color-accent-500)] to-[var(--color-accent-700)] shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 19 V5 L19 19 V5" />
-            </svg>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="font-semibold tracking-tight">Napkin</span>
-            <span className="text-xs text-[var(--color-text-3)] mono">v2</span>
-          </div>
+    <header className="border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-0)]/80 backdrop-blur-md sticky top-0 z-40">
+      <div className="h-16 px-5 lg:px-8 flex items-center justify-between gap-4">
+        {/* Brand */}
+        <div className="flex items-center gap-2.5">
+          <span className="text-[22px] leading-none" role="img" aria-label="calculator">🧮</span>
+          <span className="font-semibold text-[16px] tracking-tight">Napkin</span>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Center: Mode toggle (prominent) */}
+        <div className="flex-1 flex justify-center">
           <ModeToggle mode={mode} onChange={onModeChange} t={t} />
-          {children}
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Right: lang + extras */}
+        <div className="flex items-center gap-2">
           <LangToggle lang={lang} onChange={onLangChange} />
-          <a href="https://github.com/vvedenskyimykyta-source/napkin-unit-economics"
-             target="_blank" rel="noopener"
-             className="hidden md:inline text-xs text-[var(--color-text-3)] hover:text-[var(--color-text)] transition-colors">
-            GitHub
-          </a>
         </div>
       </div>
+
+      {/* Second row: niche selector with info */}
+      {children && (
+        <div className="px-5 lg:px-8 pb-3 flex items-center justify-center gap-3">
+          {children}
+        </div>
+      )}
     </header>
   );
 }
 
 function LangToggle({ lang, onChange }: { lang: Lang; onChange: (l: Lang) => void }) {
   return (
-    <div className="inline-flex p-0.5 rounded-full bg-[var(--color-surface-1)] border border-[var(--color-border-subtle)]">
-      {(['en', 'uk'] as const).map((l) => (
-        <button
-          key={l}
-          onClick={() => onChange(l)}
-          className={clsx(
-            'px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase transition',
-            lang === l ? 'bg-[var(--color-surface-3)] text-[var(--color-text)]' : 'text-[var(--color-text-3)] hover:text-[var(--color-text-2)]'
-          )}
-        >
-          {l}
-        </button>
-      ))}
+    <div className="inline-flex p-1 rounded-full bg-[var(--color-surface-1)] border border-[var(--color-border-subtle)]">
+      <button
+        onClick={() => onChange('en')}
+        className={clsx(
+          'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wider uppercase transition',
+          lang === 'en' ? 'bg-[var(--color-surface-3)] text-[var(--color-text)]' : 'text-[var(--color-text-3)] hover:text-[var(--color-text-2)]'
+        )}
+      >
+        <span aria-hidden>🇺🇸</span> EN
+      </button>
+      <button
+        onClick={() => onChange('uk')}
+        className={clsx(
+          'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wider uppercase transition',
+          lang === 'uk' ? 'bg-[var(--color-surface-3)] text-[var(--color-text)]' : 'text-[var(--color-text-3)] hover:text-[var(--color-text-2)]'
+        )}
+      >
+        <span aria-hidden>🇺🇦</span> UK
+      </button>
     </div>
   );
 }
@@ -72,32 +76,60 @@ interface ModeToggleProps {
 }
 
 function ModeToggle({ mode, onChange, t }: ModeToggleProps) {
+  // v2.1: bigger, more prominent, centered
   return (
-    <div className="inline-flex p-1 rounded-full bg-[var(--color-surface-1)] border border-[var(--color-border-subtle)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+    <div className="inline-flex p-1 rounded-full bg-[var(--color-surface-1)] border border-[var(--color-border)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
       <button
         onClick={() => onChange('mobile')}
         className={clsx(
-          'px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all',
+          'px-5 py-2 rounded-full text-[13px] font-semibold flex items-center gap-2 transition-all',
           mode === 'mobile'
-            ? 'bg-[var(--color-surface-3)] text-[var(--color-text)] shadow-sm'
+            ? 'bg-gradient-to-br from-[var(--color-accent-500)] to-[var(--color-accent-700)] text-white shadow-md'
             : 'text-[var(--color-text-3)] hover:text-[var(--color-text-2)]'
         )}
       >
-        <DeviceMobile size={13} weight="duotone" />
+        <DeviceMobile size={16} weight="duotone" />
         {t.modeMobile}
       </button>
       <button
         onClick={() => onChange('saas')}
         className={clsx(
-          'px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all',
+          'px-5 py-2 rounded-full text-[13px] font-semibold flex items-center gap-2 transition-all',
           mode === 'saas'
-            ? 'bg-[var(--color-surface-3)] text-[var(--color-text)] shadow-sm'
+            ? 'bg-gradient-to-br from-[var(--color-accent-500)] to-[var(--color-accent-700)] text-white shadow-md'
             : 'text-[var(--color-text-3)] hover:text-[var(--color-text-2)]'
         )}
       >
-        <Browsers size={13} weight="duotone" />
+        <Browsers size={16} weight="duotone" />
         {t.modeSaas}
       </button>
     </div>
+  );
+}
+
+export function NicheHeaderWrap({ children }: { children: React.ReactNode }) {
+  return <div className="flex items-center gap-2">{children}</div>;
+}
+
+export function InfoTip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={() => setOpen((v) => !v)}
+        className="w-4 h-4 grid place-items-center text-[var(--color-text-3)] hover:text-[var(--color-text-2)]"
+        aria-label="info"
+      >
+        <Info size={14} weight="duotone" />
+      </button>
+      {open && (
+        <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[280px] rounded-[var(--radius)] bg-[var(--color-surface-2)] border border-[var(--color-border)] px-3 py-2 text-[12px] leading-snug text-[var(--color-text-2)] shadow-lg z-50">
+          {text}
+        </span>
+      )}
+    </span>
   );
 }
