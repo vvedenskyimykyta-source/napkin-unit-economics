@@ -16,101 +16,133 @@ Prototype pricing, CPA, churn, LTV, Payback, cohort break-even and sensitivity �
 
 Plug in your budget, prices, CPA, churn and retention. Get back:
 
-- **ARPPU · eCPA · ROAS D0 · Payback · LTV13** at a glance
-- **Smart Diagnostics** — rule-based "where the economics breaks" with concrete places to dig (pricing, retention, upsells, traffic quality). No AI, no tokens — pure JS rules.
-- **Forecast** — users/month, budget runway, P&L at payback
-- **Target metrics** — the Max CPA, Min ARPPU and Max Churn boundaries where unit economics still works
-- **LTV Timeline** — month-by-month revenue per user, intro pricing and renewals accounted for
-- **Cohort Break-Even** — Monthly BE, Cumulative BE, Max Cash Gap, Cash Required
-- **Sensitivity** — three matrices (CPA × Churn, Budget × CPA, CPA × Paywall Conversion)
+- **Health Score** (0–100) — single number summarizing the economy
+- **KPI tiles** — ARPPU · eCPA · ROAS D0 · Payback · LTV 13mo
+- **Smart Diagnostics** — rule-based "where the economics breaks" with concrete places to dig. No AI, no tokens — pure JS rules.
+- **Forecast** — users per month, budget runway, P&L at payback
+- **Target metrics** — Max CPA, Min ARPPU and Max Churn where unit economics still works
+- **LTV curve** — month-by-month cumulative LTV with Payback marker
+- **Cohort Break-Even** — stacked area of revenue vs spend with Op BE and Cumulative BE markers
+- **P&L bars** — monthly and total profit at D0 and after Payback
+- **Monthly waterfall** — Gross Rev → store fee → refund → COGS → fixed → ad spend → Net Profit
+- **Sensitivity heatmap** — Payback shift across CPA × Churn perturbations
 
-## Two modes
+## Two modes, 15 niches
 
-<table>
-<tr>
-<td width="50%">
+Switch **Mobile Apps** / **Web & SaaS** at the top. Then pick a niche — Fitness, Meditation, AI Assistant, Dating, Education, Health, Productivity, Generic Mobile; AI Tools, Developer Tools, Design, Marketing, Analytics, Finance, Generic SaaS — and benchmark bands snap onto the sliders.
 
-**Mobile App**
-- Yearly / Monthly / Weekly plans
-- Store fee (Apple/Google)
-- Intro pricing → Rebill
-- D0 upsells & monthly packs
-- Typical: 30% monthly churn, $35 CPA, 60% yearly share
+## Scenarios
 
-</td>
-<td width="50%">
+Enter your real numbers → click **Save as baseline**. Now every slider move shows the delta vs baseline on each KPI tile and Payback, with a Health Score delta on top. Try the "what if churn drops 5 points" question and see the Payback shift in milliseconds.
 
-**Web & SaaS**
-- Yearly / Monthly only
-- Payment processor fee (~3%)
-- Trial-to-paid pricing flow
-- Typical: 6% monthly churn, $120 CPA, 35% annual share
+## Flexible plans
 
-</td>
-</tr>
-</table>
+Pricing isn't locked to Yearly / Monthly / Weekly. Add quarterly, semester, 6-month, 3-day — any period. Each plan carries its own intro + rebill prices and share of the mix.
 
-## Why this exists
+## Payment processor picker
+
+Pick Apple 30%, Apple 15%, Google Play, Stripe, Paddle, PayPal, RevenueCat, Lemon Squeezy — or Custom. The fee auto-fills.
+
+## Why it exists
 
 Most founders either:
 1. Guess their unit economics by vibes
-2. Open a Google Sheet that someone's cousin built in 2019
+2. Open a Google Sheet somebody's cousin built in 2019
 3. Spend three days building their own model
 
-This is for case **4**: open a page, plug in 10 numbers, see whether your business works in 2 minutes. Not a substitute for a real model — a napkin check before you commit a real budget.
+This is for case **4**: open a page, plug in 10 numbers, see whether your business works in 2 minutes. Not a substitute for a real model at scale — a napkin check before you commit a real budget.
 
 ## How to use
 
 1. Pick **Mobile App** or **Web & SaaS** at the top
-2. Enter your actual numbers (budget, prices, CPA from ad platform, your best churn guess)
-3. Read the **Smart Diagnostics** block first — it tells you what's weak
-4. Read the **Targets** block — it tells you how much slack you have
-5. Pull the sliders to see what fixes it
+2. Pick your niche → benchmark bands light up on the sliders
+3. Enter your actual numbers (budget, prices, CPA from ad platform, your best churn guess)
+4. Read **Diagnostics** first — it tells you what's weak and where to dig
+5. Read **Targets** — it tells you how much slack you have
+6. Hit **Save as baseline** → now move sliders to see "what if"
 
-**Nothing is sent to a server. Everything runs in your browser.**
+**Nothing is sent to a server. Everything runs in your browser.** Baseline is stored in `localStorage`.
+
+## Benchmarks
+
+Per-niche benchmarks (median + range) for Monthly Churn, Yearly Renewal, CPA, Paywall Conversion, ARPPU — based on public sources ~2024–2026: RevenueCat State of Subscription Apps, ChartMogul SaaS Benchmarks, Phiture reports, Lenny's Benchmarks, OpenView 2024 Benchmarks. These are directional, not audited.
 
 ## Formulas (the short version)
 
 - **ARPPU D0** = weighted avg of first payments across plan mix × (1 − store fee) × (1 − refund rate) + D0 upsell take-rate revenue
 - **eCPA** = blended paid CPA × (1 − organic share − email share) — dilutes paid CPA by free channels
-- **LTV(n)** = subscription revenue over n months (intro + rebills with renewal/churn) + monthly pack upsells on active users − COGS × active months
-- **Payback** = first month where LTV(m) ≥ eCPA
-- **Cohort BE** = full monthly cohort model summing revenue from all live cohorts vs spend; finds Monthly BE, Cumulative BE and peak cash gap
+- **LTV(n)** per plan: payments at `k·period` for `k = 0, 1, …, n/period`; each discounted by retention^k; monthly pack upsells on active user-months; minus COGS × active months
+- **Retention per period** depends on period length — `yearlyRenewal^(period/12)` for ≥12mo, `(1 − monthlyChurn)^period` for 1–12mo, `(1 − weeklyChurn)^weeks` for <1mo
+- **Payback** = first month where cumulative LTV(m) ≥ eCPA
+- **Cohort BE** = full monthly cohort model summing revenue from all live cohorts vs spend; finds Monthly BE, Cumulative BE and peak cash gap; cash required includes a 50% buffer over max deficit
+- **Health Score** = weighted combination of Payback (40pts), LTV/CAC (30pts), ROAS D0 (15pts), budget sufficiency (15pts)
 
-For edge cases and the actual code: see [`calc.js`](calc.js).
+Full source: [`src/engine/calc.ts`](src/engine/calc.ts) and [`src/engine/diagnose.ts`](src/engine/diagnose.ts).
+
+## Stack
+
+- Vite + React 18 + TypeScript
+- Tailwind v4 (OKLCH dark-first design tokens)
+- D3 (scales + line/area generators)
+- Phosphor Icons
+- No server, no backend, no account
 
 ## Local development
 
-Pure static — no build step.
-
 ```bash
-# Clone
 git clone https://github.com/vvedenskyimykyta-source/napkin-unit-economics.git
 cd napkin-unit-economics
-
-# Open
-open index.html
-# or serve
-python3 -m http.server 8000
+npm install
+npm run dev
 ```
 
-Files:
+## Project layout
 
-- `index.html` — page structure
-- `styles.css` — design system (green / cyan / white)
-- `calc.js` — pure calculation engine + rule-based diagnostics
-- `ui.js` — DOM rendering + event handlers
-- `i18n.js` — RU / EN strings
+```
+src/
+├── main.tsx
+├── App.tsx
+├── components/
+│   ├── TopBar.tsx       — mode + niche + language toggle
+│   ├── Sidebar.tsx      — all input panels (plans, costs, traffic, upsells)
+│   ├── Panel.tsx        — collapsible section wrapper
+│   ├── fields.tsx       — Slider, NumField, Switch, Field primitives
+│   ├── NicheSelector.tsx
+│   ├── BaselineBar.tsx  — Health Score + baseline/scenario diffs
+│   ├── KPITiles.tsx     — 5 top KPIs with baseline delta
+│   ├── Diagnostics.tsx  — rule-based findings card
+│   ├── Forecast.tsx
+│   ├── Targets.tsx
+│   ├── ChartCard.tsx
+│   └── charts/
+│       ├── LtvCurve.tsx       — line + area, Payback marker, eCPA threshold
+│       ├── CohortArea.tsx     — revenue vs spend, cash gap shaded, BE markers
+│       ├── SensHeatmap.tsx    — sequential ramp heatmap
+│       ├── PnlBars.tsx        — month + total horizontal bars
+│       └── Waterfall.tsx      — Gross Rev → Net Profit flow
+├── engine/
+│   ├── types.ts
+│   ├── calc.ts          — pure math engine (plan-based LTV)
+│   ├── diagnose.ts      — rule-based advisor
+│   ├── score.ts         — Health Score
+│   ├── presets.ts       — mode presets + applyNiche()
+│   ├── processors.ts    — Apple / Google / Stripe / Paddle / ...
+│   ├── periods.ts       — Weekly / Monthly / Yearly / custom
+│   └── niches.ts        — 15 niches × [low, mid, high] benchmarks
+├── i18n/
+│   └── strings.ts       — EN + UK
+└── styles/
+    └── globals.css      — Tailwind v4 + design tokens
+```
 
 ## Roadmap
 
-- [ ] True SaaS-native mode: MRR/ARR, NDR, expansion vs contraction, logo vs revenue churn
-- [ ] Shareable permalinks (encode inputs in URL)
-- [ ] Export to PDF / PNG for a decks
-- [ ] More presets (fitness app, meditation app, B2B SaaS, consumer B2C)
-- [ ] Monte Carlo sensitivity (replace fixed-step matrices)
+- [x] v2 — full redesign, sidebar/canvas, 5 charts, niches, scenarios, waterfall
+- [ ] v2.1 — Time-To-Paying (trial length), extra seats / NDR, multi-step channel funnel (CPC → CPT → CVR)
+- [ ] v2.2 — shareable URL permalinks, export to PDF, Monte Carlo sensitivity
+- [ ] v2.3 — Ukrainian benchmarks for local niches
 
-Open a GitHub issue if you want one of these sooner, or if you catch a formula bug.
+Open a GitHub issue for feature requests or formula bugs.
 
 ## License
 
@@ -118,6 +150,6 @@ MIT — do whatever, just don't claim you wrote it. See [LICENSE](LICENSE).
 
 ## Credits
 
-Built by [Nick Vedensky](https://nickvvedenskyi.com) — growth lead working with mobile and SaaS founders on monetization, pricing and unit economics.
+Built by [Nick Vedensky](https://nickvvedenskyi.com) — Fractional Head of Growth for early-stage tech, working with mobile and SaaS founders on monetization, pricing and unit economics.
 
 If this saved you an afternoon, star the repo and pass it on.
