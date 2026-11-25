@@ -33,6 +33,7 @@ export interface Inputs {
   monthlyChurnMid?: number;
 
   totalBudget: number;
+  testLengthMonths: number;  // how long the user plans to run the test (3-12)
 
   introPricing: boolean;
   plans: Plan[];

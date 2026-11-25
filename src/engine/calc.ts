@@ -172,32 +172,42 @@ export function compute(raw: Inputs): ComputeResult {
     return nltv + d0UpsellRev + pack;
   }
 
-  // Key metrics
+  // --- Key LTV points (LTV13 stays the universal KPI) ---
   const ltv1 = totalLTV(1);
   const ltv3 = totalLTV(3);
   const ltv6 = totalLTV(6);
   const ltv12 = totalLTV(12);
   const ltv13 = totalLTV(13);
 
+  // ROAS at day 0 = immediate recoup of eCPA by first-payment ARPPU
   const roasD0 = arppuWithD0 / eCPA;
 
+  // --- Payback: first month where cumulative LTV >= eCPA ---
+  // v2.1 change: search up to 60mo instead of 13mo. Keeps paybackMonth null only
+  // when the economics literally never pay back.
+  const PAYBACK_SEARCH_MAX = 60;
   let paybackMonth: number | null = null;
-  for (let m = 0; m <= 13; m++) {
+  for (let m = 0; m <= PAYBACK_SEARCH_MAX; m++) {
     const v = m === 0 ? arppuWithD0 : totalLTV(m);
     if (v >= eCPA) { paybackMonth = m; break; }
   }
 
-  // Forecast
-  const totalPurchases = totalBudget / eCPA;
-  const minMonths = paybackMonth !== null ? Math.max(paybackMonth + 1, 6) : 6;
-  const budgetPerDay = totalBudget / (minMonths * 30);
+  // --- Budget / spend ---
+  // v2.1: spend/day is derived from the USER-PICKED test length, not a hidden
+  // max(payback+1, 6) heuristic. Formula is now a clear quotient:
+  //    spendPerMonth = totalBudget / testLengthMonths
+  const testLen = Math.max(1, inputs.testLengthMonths || 6);
+  const spendPerMonth = totalBudget / testLen;
+  const budgetPerDay = spendPerMonth / 30;
+  const monthsOfBudget = testLen;
   const purchPerDay = budgetPerDay / eCPA;
   const purchPerMonth = purchPerDay * 30;
-  const spendPerMonth = budgetPerDay * 30;
-  const monthsOfBudget = Math.floor(totalBudget / spendPerMonth);
+  const totalPurchases = totalBudget / eCPA;
   const paybackBeforeBudgetEnds = paybackMonth !== null && paybackMonth <= monthsOfBudget;
 
-  const ltvAtPayback = paybackMonth !== null ? totalLTV(paybackMonth) : ltv13;
+  // LTV at the Payback mark (for P&L). When Payback never lands, we fall back
+  // to LTV at test end so the P&L shows something meaningful.
+  const ltvAtPayback = paybackMonth !== null ? totalLTV(paybackMonth) : totalLTV(Math.max(testLen, 13));
   const revenueAtPayback = totalPurchases * ltvAtPayback;
   const profitAtPayback = revenueAtPayback - totalBudget;
 
@@ -226,42 +236,59 @@ export function compute(raw: Inputs): ComputeResult {
     ? ((arppuWithD0 / minArppuForPayback) - 1) * 100
     : 100;
 
-  // Cohort BE
+  // --- Cohort break-even (v2.1: horizon extended to 60mo for consistency with Payback) ---
+  const COHORT_HORIZON = 60;
   const deltaLTV: number[] = [];
-  for (let m = 1; m <= 24; m++) {
+  for (let m = 1; m <= COHORT_HORIZON; m++) {
     const curr = totalLTV(m);
     const prev = m === 1 ? arppuWithD0 : totalLTV(m - 1);
     deltaLTV.push(curr - prev);
   }
 
+  // Spend lasts only while the test budget is running (testLen months).
+  // After that, spend stops but cohorts keep paying.
   let cumulRev = 0;
   let cumulSpend = 0;
   let monthlyBE: number | null = null;
   let cumulBE: number | null = null;
   let maxDeficit = 0;
-  for (let T = 1; T <= 24; T++) {
+  for (let T = 1; T <= COHORT_HORIZON; T++) {
     let monthlyRev = 0;
-    for (let cohort = 1; cohort <= T; cohort++) {
+    // Only cohorts acquired during the spending window contribute to new acquisition
+    const cohortsActive = Math.min(T, testLen);
+    for (let cohort = 1; cohort <= cohortsActive; cohort++) {
       const age = T - cohort;
       if (age === 0) monthlyRev += purchPerMonth * arppuWithD0;
       else if (age < deltaLTV.length) monthlyRev += purchPerMonth * deltaLTV[age];
     }
+    // Pre-testLen cohorts keep paying after spend stops
+    if (T > testLen) {
+      for (let cohort = 1; cohort <= testLen; cohort++) {
+        const age = T - cohort;
+        if (age === 0) continue;
+        if (age < deltaLTV.length) {
+          // already counted above when cohortsActive == testLen; skip duplication
+        }
+      }
+    }
     cumulRev += monthlyRev;
-    cumulSpend += spendPerMonth;
-    const monthlyPL = monthlyRev - spendPerMonth;
+    cumulSpend += T <= testLen ? spendPerMonth : 0;
+    const monthlyPL = monthlyRev - (T <= testLen ? spendPerMonth : 0);
     const cumulPL = cumulRev - cumulSpend;
     if (cumulPL < maxDeficit) maxDeficit = cumulPL;
-    if (monthlyBE === null && monthlyPL >= 0) monthlyBE = T;
+    if (monthlyBE === null && monthlyPL >= 0 && T > testLen * 0.5) monthlyBE = T;
     if (cumulBE === null && cumulPL >= 0) cumulBE = T;
   }
 
-  const monthsToMonthlyBE = monthlyBE ?? 24;
-  const spendToMonthlyBE = monthsToMonthlyBE * spendPerMonth;
+  const monthsToMonthlyBE = monthlyBE ?? COHORT_HORIZON;
+  const spendToMonthlyBE = Math.min(monthsToMonthlyBE, testLen) * spendPerMonth;
   const cashGapBuffer = Math.abs(maxDeficit) * 0.5;
   const cashRequired = spendToMonthlyBE + cashGapBuffer;
   const budgetSufficient = totalBudget >= cashRequired;
 
-  // P&L
+  // --- P&L ---
+  // D0 view: monthly revenue only from first payments of new cohort
+  // @Payback view: cumulative LTV at Payback mark multiplied by purchases
   const fixedMonthly = Math.max(0, inputs.fixedCostsMonthly);
   const revMonthD0 = purchPerMonth * arppuWithD0;
   const profitMonthD0 = revMonthD0 - spendPerMonth - fixedMonthly;

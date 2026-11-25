@@ -14,7 +14,8 @@ const saasPlans = (): Plan[] => [
 ];
 
 const BASE: Omit<Inputs, 'mode' | 'niche' | 'plans' | 'processor' | 'storeFee'> = {
-  totalBudget: 50000,
+  totalBudget: 10000,        // v2.1: lowered from $50k baseline
+  testLengthMonths: 6,
   introPricing: true,
   renewal: 55,
   churnM: 30,
@@ -50,7 +51,7 @@ const SAAS: Inputs = {
   mode: 'saas',
   niche: defaultNicheFor('saas'),
   ...BASE,
-  totalBudget: 60000,
+  totalBudget: 15000,
   plans: saasPlans(),
   renewal: 85,
   churnM: 6,

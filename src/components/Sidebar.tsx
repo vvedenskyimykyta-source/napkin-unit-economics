@@ -50,7 +50,10 @@ export function Sidebar({ inputs, set, t }: SidebarProps) {
     <aside className="hidden lg:flex flex-col border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-0)] overflow-y-auto">
       <Panel title={t.pBudget} icon={<CurrencyDollar {...ICON} />}>
         <Field label={t.totalBudget}>
-          <NumField value={inputs.totalBudget} onChange={(v) => set('totalBudget', v)} step={1000} min={0} prefix="$" />
+          <NumField value={inputs.totalBudget} onChange={(v) => set('totalBudget', v)} step={500} min={0} prefix="$" />
+        </Field>
+        <Field label="Test length (months)" hint="how long you'll run this spend">
+          <Slider value={inputs.testLengthMonths} onChange={(v) => set('testLengthMonths', v)} min={1} max={12} suffix=" mo" />
         </Field>
       </Panel>
 
