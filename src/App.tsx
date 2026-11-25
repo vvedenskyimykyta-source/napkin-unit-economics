@@ -6,6 +6,14 @@ import { strings, type Lang } from './i18n/strings';
 import { TopBar } from './components/TopBar';
 import { Sidebar } from './components/Sidebar';
 import { KPITiles } from './components/KPITiles';
+import { Diagnostics } from './components/Diagnostics';
+import { Forecast } from './components/Forecast';
+import { Targets } from './components/Targets';
+import { ChartCard } from './components/ChartCard';
+import { LtvCurve } from './components/charts/LtvCurve';
+import { CohortArea } from './components/charts/CohortArea';
+import { SensHeatmap } from './components/charts/SensHeatmap';
+import { PnlBars } from './components/charts/PnlBars';
 
 export default function App() {
   const [mode, setMode] = useState<Mode>('mobile');
@@ -33,21 +41,38 @@ export default function App() {
         <Sidebar inputs={inputs} set={set} t={t} />
 
         <main className="bg-[var(--color-surface-0)] overflow-y-auto">
-          <div className="max-w-6xl mx-auto p-6 lg:p-10 space-y-8">
+          <div className="max-w-6xl mx-auto p-6 lg:p-10 space-y-6">
             <section>
               <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
                 Napkin Unit Economics
               </h1>
-              <p className="text-[var(--color-text-2)] mt-2 max-w-xl">
+              <p className="text-[var(--color-text-2)] mt-2 max-w-xl text-sm">
                 {t.tagline}. Punch in budget, pricing, CPA, churn. Get LTV, Payback, cohort break-even.
               </p>
             </section>
 
             <KPITiles result={result} />
+            <Diagnostics result={result} />
+            <Forecast result={result} t={t} />
 
-            <section className="text-xs mono text-[var(--color-text-dim)] border border-dashed border-[var(--color-border-subtle)] rounded-[var(--radius)] p-4">
-              Phase B complete. Coming next: C (real charts — LTV curve, cohort stacked area, sensitivity heatmap, P&L waterfall), D (flexible plans, payment processors), E (niches + benchmarks), F (baseline vs scenarios), G (B2B SaaS features).
-            </section>
+            <div className="grid lg:grid-cols-2 gap-4">
+              <ChartCard title={t.sLTV} sub={t.sLTVSub}>
+                <LtvCurve result={result} />
+              </ChartCard>
+              <ChartCard title={t.sBE} sub={t.sBESub}>
+                <CohortArea result={result} />
+              </ChartCard>
+            </div>
+
+            <Targets result={result} t={t} />
+
+            <ChartCard title={t.sPnL} sub={t.sPnLSub}>
+              <PnlBars result={result} />
+            </ChartCard>
+
+            <ChartCard title={t.sSens} sub={t.sSensSub}>
+              <SensHeatmap result={result} />
+            </ChartCard>
           </div>
         </main>
       </div>
